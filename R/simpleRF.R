@@ -10,7 +10,7 @@
 ##' @title simpleOKRF
 ##' @param K Gram matrix of targets. If possible, use Phi instead of K.
 ##' @param Phi Feature matrix of targets (d \times n, d < n).
-##' @param data Covariate data of class \code{data.frame}.
+##' @param X Covariate data of class \code{data.frame}, with one row per target observation.
 ##' @param tol Error tolerance of approximation. Default 0.001.
 ##' @param num_trees Number of trees.
 ##' @param mtry Number of variables to possibly split at in each node.
@@ -42,24 +42,41 @@ simpleOKRF <- function(K = NULL, Phi = NULL, X,
 
   # TODO: Give informative error messages
   if (!is.null(Phi)) {
-    stopifnot(
-      is.matrix(Phi),
-      nrow(Phi) < ncol(Phi)
-    )
+
+    if (!is.matrix(Phi) || !is.numeric(Phi)) {
+      stop("Phi must be a numeric matrix.")
+    }
+    if (ncol(Phi) != nrow(X)) {
+      stop("Phi must have one column per observation in X.")
+    }
+    if (nrow(Phi) >= ncol(Phi)) {
+      stop("Phi must have fewer rows than columns.")
+    }
+
     feat_rep <- list(
       type = "explicit",
       Phi = Phi
     )
+
   } else {
-    stopifnot(
-      is.matrix(K),
-      nrow(K) == ncol(K)
-    )
+
+    if (!is.matrix(K) || !is.numeric(K)) {
+      stop("K must be a numeric matrix.")
+    }
+    if (nrow(K) != ncol(K)) {
+      stop("K must be square.")
+    }
+    if (nrow(K) != nrow(X)) {
+      stop("K must have one row and column per observation in X.")
+    }
+
     feat_rep <- list(
       type = "implicit",
       K = K
     )
+
   }
+
   stopifnot(
     length(tol) == 1L,
     is.finite(tol),
