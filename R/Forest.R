@@ -1,7 +1,6 @@
 
 ##' @title Forest class
-##' @description Virtual class for Random forest.
-##' Contains all fields and methods used in all Forest subclasses.
+##' @description Virtual class for output kernel random forest.
 ##' @importFrom parallel mclapply
 ##' @import methods
 Forest <- setRefClass("Forest",
@@ -9,11 +8,11 @@ Forest <- setRefClass("Forest",
     num_trees = "integer",
     mtry = "integer",
     min_node_size = "integer",
-    splitrule = "character",
     unordered_factors = "character",
-    data = "Data",
+    feat_rep = "list",
+    tol = "numeric",
+    x_data = "Data",
     predict_data = "Data",
-    formula = "formula",
     trees = "list",
     treetype = "character",
     replace = "logical",
@@ -22,20 +21,29 @@ Forest <- setRefClass("Forest",
 
     grow = function(num_threads) {
 
-      ## Init trees
-      temp <- lapply(trees, function(x) {
-        x$mtry <- mtry
-        x$min_node_size <- min_node_size
-        x$splitrule <- splitrule
-        x$unordered_factors <- unordered_factors
-        x$data <- data
-      })
+      trees <<- replicate(
+        num_trees,
+        Tree$new(
+          mtry = mtry,
+          min_node_size = min_node_size,
+          unordered_factors = unordered_factors,
+          x_data = x_data,
+          feat_rep = feat_rep,
+          tol = tol
+        ),
+        simplify = FALSE
+      )
 
-      ## Grow trees
-      trees <<- mclapply(trees, function(x) {
-        x$grow(replace)
-        x
-      }, mc.cores = num_threads)
+      trees <<- parallel::mclapply(
+        trees,
+        function(tree) {
+          tree$grow(replace = replace)
+          tree
+        },
+        mc.cores = num_threads
+      )
+
+      invisible(.self)
     },
 
     predict = function(newdata) {
@@ -54,21 +62,12 @@ Forest <- setRefClass("Forest",
       return(aggregatePredictions(predictions))
     },
 
-    aggregatePredictions = function(predictions) {
-      ## Empty virtual function
-    },
-
-    predictionError = function() {
-      ## Empty virtual function
-    },
-
     show = function() {
-      cat("simpleRF Forest\n")
+      cat("simpleOKRF Forest\n")
       cat("Type:                            ", treetype, "\n")
-      cat("Splitrule:                       ", splitrule, "\n")
       cat("Number of trees:                 ", num_trees, "\n")
-      cat("Sample size:                     ", data$nrow, "\n")
-      cat("Number of independent variables: ", data$ncol, "\n")
+      cat("Sample size:                     ", x_data$nrow, "\n")
+      cat("Number of independent variables: ", x_data$ncol, "\n")
       cat("Mtry:                            ", mtry, "\n")
       cat("Target node size:                ", min_node_size, "\n")
       cat("Replace                          ", replace, "\n")

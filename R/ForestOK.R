@@ -5,21 +5,23 @@
 ForestOK <- setRefClass("ForestOK",
   contains = "Forest",
   fields = list(
-    X = "data.frame",
     feat_rep = "list",
-    trees = "list",
-    num_trees = "numeric",
-    mtry = "numeric",
-    min_node_size = "numeric",
     tol = "numeric"
-    ),
+  ),
   methods = list(
 
     grow = function(num_threads) {
-      treetype <<- "Regression"
+      treetype <<- "OK"
 
       ## Create trees
-      trees <<- replicate(num_trees, TreeRegression$new())
+      trees <<- replicate(
+        num_trees,
+        TreeOK$new(
+          feat_rep = feat_rep,
+          tol = tol
+        ),
+        simplify = FALSE
+      )
 
       ## Call parent method
       callSuper(num_threads)

@@ -1,25 +1,27 @@
 
 ##' @title Tree class
-##' @description Virtual class for Random forest tree.
-##' Contains all fields and methods used in all tree subclasses.
+##' @description Virtual class for output kernel random forest tree.
 Tree <- setRefClass("Tree",
   fields = list(
     mtry = "integer",
     min_node_size = "integer",
-    splitrule = "character",
     unordered_factors = "character",
-    data = "Data",
+    x_data = "Data",
+    feat_rep = "list",
+    tol = "numeric",
+    approx_rank = "numeric",
     sampleIDs = "list",
     oob_sampleIDs = "integer",
     child_nodeIDs = "list",
     split_varIDs = "integer",
     split_values = "numeric",
-    split_levels_left = "list"),
+    split_levels_left = "list",
+    terminal_sampleIDs = "list"),
   methods = list(
 
     grow = function(replace) {
       ## Bootstrap
-      num_samples <- data$nrow
+      num_samples <- x_data$nrow
       if (replace) {
         num_bootstrap_samples <- num_samples
       } else {
@@ -37,7 +39,7 @@ Tree <- setRefClass("Tree",
 
     splitNode = function(nodeID) {
       ## Sample possible split variables
-      possible_split_varIDs <- sample.int(data$ncol, mtry)
+      possible_split_varIDs <- sample.int(x_data$ncol, mtry)
 
       ## Split node
       split <- splitNodeInternal(nodeID, possible_split_varIDs)
@@ -55,10 +57,10 @@ Tree <- setRefClass("Tree",
         ## For each sample in node, assign to left or right child
         if (length(split_levels_left[[nodeID]]) == 0) {
           ## Ordered splitting
-          idx <- data$subset(sampleIDs[[nodeID]], split$varID) <= split$value
+          idx <- x_data$subset(sampleIDs[[nodeID]], split$varID) <= split$value
         } else {
           # Unordered splitting
-          idx <- data$subset(sampleIDs[[nodeID]], split$varID) %in% split_levels_left[[nodeID]]
+          idx <- x_data$subset(sampleIDs[[nodeID]], split$varID) %in% split_levels_left[[nodeID]]
         }
         sampleIDs[[left_child]] <<- sampleIDs[[nodeID]][idx]
         sampleIDs[[right_child]] <<- sampleIDs[[nodeID]][!idx]

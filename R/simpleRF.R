@@ -46,10 +46,18 @@ simpleOKRF <- function(K = NULL, Phi = NULL, X,
       is.matrix(Phi),
       nrow(Phi) > ncol(Phi)
     )
+    feat_rep <- list(
+      type = "explicit",
+      Phi = Phi
+    )
   } else {
     stopifnot(
       is.matrix(K),
       nrow(K) == ncol(K)
+    )
+    feat_rep <- list(
+      type = "implicit",
+      K = K
     )
   }
   stopifnot(
@@ -86,12 +94,15 @@ simpleOKRF <- function(K = NULL, Phi = NULL, X,
   }
 
   ## Create forest object
-  forest <- ForestRegression$new(num_trees = as.integer(num_trees), mtry = as.integer(mtry),
-                                 min_node_size = as.integer(min_node_size),
-                                 replace = replace, splitrule = splitrule,
-                                 data = Data$new(data = model.data),
-                                 formula = formula, unordered_factors = unordered_factors,
-                                 covariate_levels = covariate_levels)
+  forest <- Forest$new(num_trees = as.integer(num_trees),
+                         mtry = as.integer(mtry),
+                         min_node_size = as.integer(min_node_size),
+                         replace = replace,
+                         data = Data$new(data = X),
+                         unordered_factors = unordered_factors,
+                         covariate_levels = covariate_levels,
+                         feat_rep = feat_rep,
+                         tol = tol)
 
   ## Grow forest
   forest$grow(num_threads = num_threads)
