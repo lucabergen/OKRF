@@ -46,20 +46,9 @@ Forest <- setRefClass("Forest",
       invisible(.self)
     },
 
-    predict = function(newdata) {
-
-      # TODO: check if newdata has the correct format
-
-      ## Save prediction data in model
-      predict_data <<- Data$new(data = newdata)
-
-      ## Predict in trees
-      predictions <- simplify2array(lapply(trees, function(x) {
-        x$predict(predict_data)
-      }))
-
-      ## Aggregate predictions
-      return(aggregatePredictions(predictions))
+    predict = function(newdata, type = c("weights", "response")) {
+      # TODO: implement prediction; add checks if newdata has correct format
+      stop("Prediction is not implemented yet.")
     },
 
     show = function() {
