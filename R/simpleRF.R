@@ -11,7 +11,7 @@
 ##' @param K Gram matrix of targets
 ##' @param Phi Feature matrix of targets
 ##' @param data Covariate data of class \code{data.frame}.
-##' @param eps Error tolerance of approximation. Default 0.001.
+##' @param tol Error tolerance of approximation. Default 0.001.
 ##' @param num_trees Number of trees.
 ##' @param mtry Number of variables to possibly split at in each node.
 ##' @param min_node_size Minimal node size. Default 5.
