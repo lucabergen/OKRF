@@ -48,7 +48,7 @@ Tree <- setRefClass("Tree",
       splitNode(1)
 
       invisible(.self)
-    }
+    },
 
 
     splitNode = function(nodeID) {
