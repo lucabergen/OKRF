@@ -8,8 +8,8 @@
 ##' With "partition" all 2-partitions of the factor levels are considered for splitting.
 ##'
 ##' @title simpleOKRF
-##' @param K Gram matrix of targets
-##' @param Phi Feature matrix of targets
+##' @param K Gram matrix of targets. If possible, use Phi instead of K.
+##' @param Phi Feature matrix of targets (d \times n, d < n).
 ##' @param data Covariate data of class \code{data.frame}.
 ##' @param tol Error tolerance of approximation. Default 0.001.
 ##' @param num_trees Number of trees.
@@ -44,7 +44,7 @@ simpleOKRF <- function(K = NULL, Phi = NULL, X,
   if (!is.null(Phi)) {
     stopifnot(
       is.matrix(Phi),
-      nrow(Phi) > ncol(Phi)
+      nrow(Phi) < ncol(Phi)
     )
     feat_rep <- list(
       type = "explicit",
@@ -63,7 +63,7 @@ simpleOKRF <- function(K = NULL, Phi = NULL, X,
   stopifnot(
     length(tol) == 1L,
     is.finite(tol),
-    tol >= 0
+    tol > 0
   )
 
   if (is.null(mtry)) {

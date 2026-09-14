@@ -1,6 +1,6 @@
 
 ##' @title Forest class
-##' @description Virtual class for output kernel random forest.
+##' @description Output kernel random forest.
 ##' @importFrom parallel mclapply
 ##' @import methods
 Forest <- setRefClass("Forest",
@@ -51,7 +51,6 @@ Forest <- setRefClass("Forest",
 
     show = function() {
       cat("simpleOKRF Forest\n")
-      cat("Type:                            ", treetype, "\n")
       cat("Number of trees:                 ", num_trees, "\n")
       cat("Sample size:                     ", x_data$nrow, "\n")
       cat("Number of independent variables: ", x_data$ncol, "\n")
@@ -59,7 +58,6 @@ Forest <- setRefClass("Forest",
       cat("Target node size:                ", min_node_size, "\n")
       cat("Replace                          ", replace, "\n")
       cat("Unordered factor handling        ", unordered_factors, "\n")
-      cat("OOB prediction error:            ", predictionError(), "\n")
     },
 
     print = function() {

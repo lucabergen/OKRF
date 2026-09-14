@@ -1,6 +1,6 @@
 
 ##' @title Tree class
-##' @description Virtual class for output kernel random forest tree.
+##' @description Output kernel random forest tree.
 Tree <- setRefClass("Tree",
   fields = list(
     mtry = "integer",
@@ -20,22 +20,36 @@ Tree <- setRefClass("Tree",
   methods = list(
 
     grow = function(replace) {
-      ## Bootstrap
+
+      # Boostrap
       num_samples <- x_data$nrow
+
       if (replace) {
         num_bootstrap_samples <- num_samples
       } else {
-        num_bootstrap_samples <- num_samples * 0.6321
+        num_bootstrap_samples <- floor(0.6321 * num_samples)
       }
-      bootstrap_sample <- sample(num_samples, num_bootstrap_samples, replace = replace)
-      oob_sampleIDs <<- (1:num_samples)[-bootstrap_sample]
 
-      ## Assign bootstrap samples to root node
+      bootstrap_sample <- sample.int(
+        n = num_samples,
+        size = num_bootstrap_samples,
+        replace = replace
+      )
+
+      oob_sampleIDs <<- setdiff(
+        seq_len(num_samples),
+        unique(bootstrap_sample)
+      )
+
+      # Assign bootstrap samples to root node
       sampleIDs <<- list(bootstrap_sample)
 
-      ## Call recursive splitting function on root node
+      # Call recursive splitting function on root node
       splitNode(1)
-    },
+
+      invisible(.self)
+    }
+
 
     splitNode = function(nodeID) {
       ## Sample possible split variables
@@ -77,7 +91,8 @@ Tree <- setRefClass("Tree",
     },
 
     splitNodeInternal = function(nodeID, possible_split_varIDs) {
-      ## Empty virtual function
+      # TODO: Implement split function
+      stop("Splitting has not been implemented yet")
     },
 
     makeTerminalNode = function(nodeID) {
