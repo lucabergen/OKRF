@@ -2,7 +2,7 @@
 ##' @title Output kernel tree class
 ##' @description Subclass for output kernel tree.
 ##' Contains all fields and methods used special for output kernel trees.
-TreeRegression <- setRefClass("TreeOK",
+TreeOK <- setRefClass("TreeOK",
   contains = "Tree",
   fields = list(
     feat_rep = "list",

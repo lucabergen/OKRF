@@ -2,7 +2,7 @@
 ##' @title Output kernel forest class
 ##' @description Subclass for output kernel forests.
 ##' Contains all fields and methods used special for output kernel forests.
-ForestRegression <- setRefClass("ForestOK",
+ForestOK <- setRefClass("ForestOK",
   contains = "Forest",
   fields = list(
     X = "data.frame",
