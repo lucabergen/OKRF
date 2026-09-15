@@ -86,16 +86,6 @@ Tree <- setRefClass("Tree",
       invisible(.self)
     },
 
-    ## Naive explicit split score, eg for unit tests
-    # splitScore = function(left_ids, right_ids) {
-    #
-    #   left_sum <- colSums(chol_features[left_ids, , drop = FALSE])
-    #   right_sum <- colSums(chol_features[right_ids, , drop = FALSE])
-    #
-    #   sum(left_sum^2) / length(left_ids) +
-    #     sum(right_sum^2) / length(right_ids)
-    # },
-
     splitNode = function(nodeID) {
       ## Sample possible split variables
       possible_split_varIDs <- sample.int(
@@ -144,9 +134,153 @@ Tree <- setRefClass("Tree",
       }
     },
 
+    findBestSplit = function(nodeID, possible_split_varIDs) {
+
+      best_split <- list(
+        score = -Inf,
+        varID = NA_integer_,
+        value = NA_real_,
+        values_left = character(0)
+      )
+
+      for (split_varID in possible_split_varIDs) {
+
+        data_values <- x_data$subset(sampleIDs[[nodeID]], split_varID)
+
+        if (anyNA(data_values)) {
+          stop("Missing values in split covariates are not supported yet.")
+        }
+
+        if (is.numeric(data_values) || is.ordered(data_values)) {
+
+          best_split <- findBestSplitValueOrdered(
+            nodeID = nodeID,
+            split_varID = split_varID,
+            best_split = best_split
+          )
+
+        } else {
+          stop("Unordered factors are not implemented yet.")
+        }
+
+      }
+
+      if (!is.finite(best_split$score)) {
+        return(NULL)
+      }
+
+      best_split
+    },
+
+    findBestSplitValueOrdered = function(nodeID, split_varID, best_split) {
+
+      node_sampleIDs <- sampleIDs[[nodeID]]
+
+      data_values <- x_data$subset(node_sampleIDs, split_varID)
+
+      ## Numeric and ordered variables are represented by their numeric codes
+      ordered_values <- as.numeric(data_values)
+
+      ## Sort only once
+      order_idx <- order(ordered_values)
+
+      ordered_values <- ordered_values[order_idx]
+
+      ordered_chol_features <- chol_features[node_sampleIDs[order_idx],
+                                             ,drop = FALSE]
+
+      num_samples <- length(ordered_values)
+
+      ## End positions of groups with equal covariate values
+      group_ends <- which(
+        ordered_values[-num_samples] < ordered_values[-1L]
+      )
+
+      if (length(group_ends) == 0L) {
+        return(best_split)
+      }
+
+      ## Initially all observations are in the right child
+      sum_left <- numeric(approx_rank)
+      sum_right <- colSums(ordered_chol_features)
+
+      n_left <- 0L
+      n_right <- num_samples
+      group_start <- 1L
+
+      for (group_end in group_ends) {
+
+        ## Move one complete value group from right to left
+        group_features <- ordered_chol_features[group_start:group_end,,
+                                                drop = FALSE]
+
+        group_sum <- colSums(group_features)
+        group_size <- group_end - group_start + 1L
+
+        sum_left <- sum_left + group_sum
+        sum_right <- sum_right - group_sum
+
+        n_left <- n_left + group_size
+        n_right <- n_right - group_size
+
+        ## Respect min_node_size
+        if (n_left >= min_node_size && n_right >= min_node_size) {
+
+          score <- sum(sum_left^2) / n_left + sum(sum_right^2) / n_right
+
+          if (score > best_split$score) {
+
+            split_value <- ordered_values[group_end] +
+              (ordered_values[group_end + 1L] - ordered_values[group_end]) / 2
+
+            best_split <- list(
+              score = score,
+              varID = as.integer(split_varID),
+              value = split_value,
+              values_left = character(0)
+            )
+          }
+        }
+
+        ## Continue with the next group
+        group_start <- group_end + 1L
+      }
+
+      best_split
+    },
+
     splitNodeInternal = function(nodeID, possible_split_varIDs) {
-      # TODO: Implement split function
-      stop("Splitting has not been implemented yet")
+
+      node_sampleIDs <- sampleIDs[[nodeID]]
+
+      ## No further split if the node is too small
+      if (length(node_sampleIDs) < 2L * min_node_size) {
+        return(NULL)
+      }
+
+      ## Score of the unsplit node
+      node_features <- chol_features[node_sampleIDs,,drop = FALSE]
+
+      node_sum <- colSums(node_features)
+
+      node_score <- sum(node_sum^2) / length(node_sampleIDs)
+
+      ## Search candidate splits
+      best_split <- findBestSplit(
+        nodeID = nodeID,
+        possible_split_varIDs = possible_split_varIDs
+      )
+
+      if (is.null(best_split)) {
+        return(NULL)
+      }
+
+      ## Only accept an improvement
+      if (best_split$score <= node_score) {
+        return(NULL)
+      }
+
+      best_split
     },
 
     makeTerminalNode = function(nodeID) {
