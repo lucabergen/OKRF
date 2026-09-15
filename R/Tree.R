@@ -286,7 +286,7 @@ Tree <- setRefClass("Tree",
     makeTerminalNode = function(nodeID) {
       # Save observation indices
       terminal_sampleIDs[[nodeID]] <<- sampleIDs[[nodeID]]
-    },
+    }
 
     )
 )
