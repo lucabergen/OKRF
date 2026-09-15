@@ -9,6 +9,7 @@ Tree <- setRefClass("Tree",
     x_data = "Data",
     feat_rep = "list",
     tol = "numeric",
+    chol_features = "matrix",
     approx_rank = "integer",
     sampleIDs = "list",
     oob_sampleIDs = "integer",
@@ -19,9 +20,59 @@ Tree <- setRefClass("Tree",
     terminal_sampleIDs = "list"),
   methods = list(
 
+    initialize = function(...) {
+
+      callSuper(...)
+
+      ## Assign Cholesky features
+      if (feat_rep$type == "explicit") {
+
+        chol_features <<- feat_rep$Phi
+
+        approx_rank <<- as.integer(
+          ncol(chol_features)
+        )
+
+      } else {
+
+        stop(
+          "K-based feature construction is not implemented yet."
+        )
+      }
+
+      ## Validate dimensions
+      if (nrow(chol_features) != x_data$nrow) {
+        stop(
+          "`feat_rep$Phi` must have one row for each observation in `x_data`."
+        )
+      }
+
+      if (ncol(chol_features) != approx_rank) {
+        stop(
+          "`approx_rank` must equal `ncol(chol_features)`."
+        )
+      }
+
+      invisible(.self)
+    },
+
     grow = function(replace) {
 
-      # Boostrap
+      ## Validate Cholesky features
+      if (nrow(chol_features) != x_data$nrow) {
+        stop(
+          "`chol_features` must have one row for each row in `x_data`."
+        )
+      }
+
+      if (ncol(chol_features) != approx_rank) {
+        stop(
+          "`approx_rank` must equal `ncol(chol_features)`."
+        )
+      }
+
+
+      ## Boostrap
       num_samples <- x_data$nrow
 
       if (replace) {
@@ -41,7 +92,7 @@ Tree <- setRefClass("Tree",
         unique(bootstrap_sample)
       )
 
-      # Assign bootstrap samples to root node
+      ## Assign bootstrap samples to root node
       sampleIDs <<- list(bootstrap_sample)
 
       # Call recursive splitting function on root node
@@ -50,18 +101,36 @@ Tree <- setRefClass("Tree",
       invisible(.self)
     },
 
+    ## Naive explicit split score, eg for unit tests
+    # splitScore = function(left_ids, right_ids) {
+    #
+    #   left_sum <- colSums(chol_features[left_ids, , drop = FALSE])
+    #   right_sum <- colSums(chol_features[right_ids, , drop = FALSE])
+    #
+    #   sum(left_sum^2) / length(left_ids) +
+    #     sum(right_sum^2) / length(right_ids)
+    # },
 
     splitNode = function(nodeID) {
       ## Sample possible split variables
-      possible_split_varIDs <- sample.int(x_data$ncol, mtry)
+      possible_split_varIDs <- sample.int(
+        n = x_data$ncol,
+        size = mtry,
+        replace = FALSE
+      )
 
       ## Split node
-      split <- splitNodeInternal(nodeID, possible_split_varIDs)
+      split <- splitNodeInternal(
+        nodeID = nodeID,
+        possible_split_varIDs = possible_split_varIDs
+      )
 
       if (!is.null(split)) {
-        ## Assign split
+
+        ## Save split information
         split_varIDs[[nodeID]] <<- split$varID
         split_values[[nodeID]] <<- split$value
+        split_levels_left[[nodeID]] <<- split$values_left
 
         ## Create child nodes
         left_child <- length(sampleIDs) + 1

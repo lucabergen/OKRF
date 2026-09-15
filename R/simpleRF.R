@@ -9,7 +9,7 @@
 ##'
 ##' @title simpleOKRF
 ##' @param K Gram matrix of targets. If possible, use Phi instead of K.
-##' @param Phi Feature matrix of targets (d \times n, d < n).
+##' @param Phi Feature matrix of targets (n \times d, n > d).
 ##' @param X Covariate data of class \code{data.frame}, with one row per target observation.
 ##' @param tol Error tolerance of approximation. Default 0.001.
 ##' @param num_trees Number of trees.
@@ -32,25 +32,36 @@ simpleOKRF <- function(K = NULL, Phi = NULL, X,
                        num_threads = 1) {
 
   ## Check parameters
+
+  # Covariate df
+  if (!is.data.frame(X)) {
+    stop("X must be a data.frame.")
+  }
+  if (nrow(X) < 2L) {
+    stop("X must contain at least two observations.")
+  }
+  if (ncol(X) < 1L) {
+    stop("X must contain at least one covariate.")
+  }
+
+  # Feature representation
   if (is.null(K) && is.null(Phi)) {
     stop("Either K or Phi must be specified.")
   }
-
   if (!is.null(K) && !is.null(Phi)) {
     warning("Both K and Phi specified. Only Phi is used.")
   }
 
-  # TODO: Give informative error messages
   if (!is.null(Phi)) {
 
     if (!is.matrix(Phi) || !is.numeric(Phi)) {
       stop("Phi must be a numeric matrix.")
     }
-    if (ncol(Phi) != nrow(X)) {
-      stop("Phi must have one column per observation in X.")
+    if (nrow(Phi) != nrow(X)) {
+      stop("Phi must have the same numer of rows as X.")
     }
-    if (nrow(Phi) >= ncol(Phi)) {
-      stop("Phi must have fewer rows than columns.")
+    if (nrow(Phi) <= ncol(Phi)) {
+      stop("Phi must have fewer columns than rows.")
     }
 
     feat_rep <- list(
@@ -66,8 +77,11 @@ simpleOKRF <- function(K = NULL, Phi = NULL, X,
     if (nrow(K) != ncol(K)) {
       stop("K must be square.")
     }
+    if (!isSymmetric(K)) {
+      stop("K must be symmetric.")
+    }
     if (nrow(K) != nrow(X)) {
-      stop("K must have one row and column per observation in X.")
+      stop("K must have the same number of rows and columns as X.")
     }
 
     feat_rep <- list(
@@ -97,6 +111,8 @@ simpleOKRF <- function(K = NULL, Phi = NULL, X,
     stop("Unknown value for unordered_factors.")
   }
   covariate_levels <- list()
+
+  ##  TODO: Add checks and give informative error messages for other params
 
   if (unordered_factors == "ignore") {
     ## Just set to ordered if "ignore"
