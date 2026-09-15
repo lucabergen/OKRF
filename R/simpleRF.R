@@ -1,4 +1,4 @@
-##' A simple implementation of Output Kernel Random Forests using tree-wise
+##' A simple implementation of Output Kernel Random Forests using forest-wise
 ##' feature approximations based on the R package \code{simpleRF}.
 ##' Uses reference classes and only plain \code{R}.
 ##' Not optimized for computation speed.
