@@ -7,8 +7,6 @@ Tree <- setRefClass("Tree",
     min_node_size = "integer",
     unordered_factors = "character",
     x_data = "Data",
-    feat_rep = "list",
-    tol = "numeric",
     chol_features = "matrix",
     approx_rank = "integer",
     sampleIDs = "list",
@@ -24,34 +22,21 @@ Tree <- setRefClass("Tree",
 
       callSuper(...)
 
-      ## Assign Cholesky features
-      if (feat_rep$type == "explicit") {
-
-        chol_features <<- feat_rep$Phi
-
-        approx_rank <<- as.integer(
-          ncol(chol_features)
-        )
-
-      } else {
-
+      if (!is.matrix(chol_features)) {
         stop(
-          "K-based feature construction is not implemented yet."
+          "`chol_features` must be a matrix."
         )
       }
 
-      ## Validate dimensions
       if (nrow(chol_features) != x_data$nrow) {
         stop(
-          "`feat_rep$Phi` must have one row for each observation in `x_data`."
+          "`chol_features` must have one row for each observation in `x_data`."
         )
       }
 
-      if (ncol(chol_features) != approx_rank) {
-        stop(
-          "`approx_rank` must equal `ncol(chol_features)`."
-        )
-      }
+      approx_rank <<- as.integer(
+        ncol(chol_features)
+      )
 
       invisible(.self)
     },

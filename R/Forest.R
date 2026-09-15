@@ -10,12 +10,55 @@ Forest <- setRefClass("Forest",
     min_node_size = "integer",
     unordered_factors = "character",
     feat_rep = "list",
+    chol_features = "matrix",
     tol = "numeric",
+    approx_scope = "character",
+    approx_rank = "integer",
     x_data = "Data",
     trees = "list",
     replace = "logical",
     covariate_levels = "list"),
   methods = list(
+
+
+    initialize = function(...) {
+
+      callSuper(...)
+
+      # TODO: Add proper feature approximation
+
+      ## Assign forest-specific Cholesky features
+      if (feat_rep$type == "explicit") {
+
+        chol_features <<- feat_rep$Phi
+
+        approx_rank <<- as.integer(
+          ncol(chol_features)
+        )
+
+      } else {
+
+        stop(
+          "K-based feature construction is not implemented yet."
+        )
+      }
+
+      ## Validate dimensions
+      if (nrow(chol_features) != x_data$nrow) {
+        stop(
+          "`chol_features` must have one row for each observation in `x_data`."
+        )
+      }
+
+      if (ncol(chol_features) != approx_rank) {
+        stop(
+          "`approx_rank` must equal `ncol(chol_features)`."
+        )
+      }
+
+      invisible(.self)
+    },
+
 
     grow = function(num_threads) {
 
@@ -26,8 +69,8 @@ Forest <- setRefClass("Forest",
           min_node_size = min_node_size,
           unordered_factors = unordered_factors,
           x_data = x_data,
-          feat_rep = feat_rep,
-          tol = tol
+          chol_features = chol_features,
+          approx_rank = approx_rank
         ),
         simplify = FALSE
       )
