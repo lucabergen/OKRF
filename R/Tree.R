@@ -114,8 +114,10 @@ Tree <- setRefClass("Tree",
 
         ## For each sample in node, assign to left or right child
         if (length(split_levels_left[[nodeID]]) == 0) {
-          ## Ordered splitting
-          idx <- x_data$subset(sampleIDs[[nodeID]], split$varID) <= split$value
+          ## Numeric or ordered splitting
+          idx <- as.numeric(
+            x_data$subset(sampleIDs[[nodeID]], split$varID)
+          ) <= split$value
         } else {
           # Unordered splitting
           idx <- x_data$subset(sampleIDs[[nodeID]], split$varID) %in% split_levels_left[[nodeID]]
