@@ -9,7 +9,7 @@
 ##'
 ##' @title simpleOKRF
 ##' @param K Gram matrix of targets. If possible, use Phi instead of K.
-##' @param Phi Feature matrix of targets (n \times d, n > d).
+##' @param Phi Feature matrix of targets (\eqn{n \times d, n > d}).
 ##' @param X Covariate data of class \code{data.frame}, with one row per target observation.
 ##' @param tol Error tolerance of approximation. Default 0.001.
 ##' @param num_trees Number of trees.
