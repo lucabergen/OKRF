@@ -43,6 +43,9 @@ simpleOKRF <- function(K = NULL, Phi = NULL, X,
   if (ncol(X) < 1L) {
     stop("X must contain at least one covariate.")
   }
+  if (anyNA(X)) {
+    stop("Missing values in split covariates are not supported.")
+  }
 
   # Feature representation
   if (is.null(K) && is.null(Phi)) {
@@ -116,11 +119,18 @@ simpleOKRF <- function(K = NULL, Phi = NULL, X,
 
   if (unordered_factors == "ignore") {
     ## Just set to ordered if "ignore"
-    character.idx <- sapply(X, is.character)
-    ordered.idx <- sapply(X, is.ordered)
-    factor.idx <- sapply(X, is.factor)
+    character.idx <- vapply(X, is.character, logical(1))
+    ordered.idx <- vapply(X, is.ordered, logical(1))
+    factor.idx <- vapply(X, is.factor, logical(1))
     recode.idx <- character.idx | (factor.idx & !ordered.idx)
-    X[, recode.idx] <- lapply(X[, recode.idx], as.ordered)
+
+    ## `drop = FALSE` is important when exactly one column is recoded.
+    if (any(recode.idx)) {
+      X[, recode.idx] <- lapply(
+        X[, recode.idx, drop = FALSE],
+        as.ordered
+      )
+    }
 
     ## Save levels
     covariate_levels <- lapply(X, levels)
