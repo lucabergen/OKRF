@@ -4,7 +4,7 @@ Title: A simple implementation of Output Kernel Random Forests
 Version: 0.1.5
 Date: 2022-03-07
 Author: Luca Bergen
-Maintainer: Luca Bergen
+Maintainer: Luca Bergen <lucabergen@yahoo.com>
 Description: Somewhat slow.
 License: GPL-3
 Imports:
