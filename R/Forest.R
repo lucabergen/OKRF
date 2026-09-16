@@ -46,6 +46,11 @@ Forest <- setRefClass("Forest",
         )
       }
 
+      covariate_levels <<- lapply(
+        x_data$data,
+        levels
+      )
+
       invisible(.self)
     },
 
@@ -84,6 +89,78 @@ Forest <- setRefClass("Forest",
       }
 
       invisible(.self)
+    },
+
+
+    prepareNewdata = function(newdata) {
+
+      if (!is.data.frame(newdata)) {
+        stop("`newdata` must be a data.frame.")
+      }
+
+      if (ncol(newdata) != x_data$ncol) {
+        stop(
+          "`newdata` must have the same number of columns as the training data."
+        )
+      }
+
+      if (!identical(colnames(newdata), x_data$names)) {
+        stop(
+          "`newdata` must have the same column names and order as the training data."
+        )
+      }
+
+      if (length(covariate_levels) != x_data$ncol) {
+        stop(
+          "`covariate_levels` must contain one entry for each covariate."
+        )
+      }
+
+      ## Work on a copy. The input data.frame is not modified by reference.
+      prepared_newdata <- newdata
+
+      for (j in seq_len(x_data$ncol)) {
+
+        training_levels <- covariate_levels[[j]]
+
+        ## Numeric covariates do not have factor levels and are unchanged.
+        if (is.null(training_levels)) {
+          next
+        }
+
+        ## Convert factor, ordered factor, or character input to character
+        ## before imposing the training levels.
+        values <- as.character(
+          prepared_newdata[[j]]
+        )
+
+        ## Check for levels that were not present during training.
+        observed_values <- unique(
+          values[!is.na(values)]
+        )
+
+        unknown_values <- setdiff(
+          observed_values,
+          training_levels
+        )
+
+        if (length(unknown_values) > 0L) {
+          stop(
+            "Column `",
+            x_data$names[j],
+            "` contains values not present in the training data: ",
+            paste(unknown_values, collapse = ", ")
+          )
+        }
+
+        ## Recreate the exact ordered-factor representation used for training.
+        prepared_newdata[[j]] <- ordered(
+          values,
+          levels = training_levels
+        )
+      }
+
+      prepared_newdata
     },
 
 

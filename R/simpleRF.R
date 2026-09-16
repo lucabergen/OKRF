@@ -113,7 +113,6 @@ simpleOKRF <- function(K = NULL, Phi = NULL, X,
   if (!(unordered_factors %in% c("ignore", "partition"))) {
     stop("Unknown value for unordered_factors.")
   }
-  covariate_levels <- list()
 
   ##  TODO: Add checks and give informative error messages for other params
 
@@ -131,9 +130,6 @@ simpleOKRF <- function(K = NULL, Phi = NULL, X,
         as.ordered
       )
     }
-
-    ## Save levels
-    covariate_levels <- lapply(X, levels)
   }
 
   ## Create forest object
@@ -143,7 +139,6 @@ simpleOKRF <- function(K = NULL, Phi = NULL, X,
                          replace = replace,
                          x_data = Data$new(data = X),
                          unordered_factors = unordered_factors,
-                         covariate_levels = covariate_levels,
                          feat_rep = feat_rep,
                          tol = tol)
 
