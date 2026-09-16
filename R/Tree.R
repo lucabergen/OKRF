@@ -366,6 +366,44 @@ Tree <- setRefClass("Tree",
       )
     },
 
+    setTerminalPredictions = function(original_features) {
+
+      if (!is.matrix(original_features)) {
+        stop("`original_features` must be a matrix.")
+      }
+
+      if (nrow(original_features) != x_data$nrow) {
+        stop(
+          "`original_features` must have one row for each observation in `x_data`."
+        )
+      }
+
+      num_nodes <- length(sampleIDs)
+      num_features <- ncol(original_features)
+
+      terminal_predictions_new <- matrix(
+        0,
+        nrow = num_nodes,
+        ncol = num_features
+      )
+
+      for (nodeID in seq_len(num_nodes)) {
+        if (!is.null(terminal_sampleIDs[[nodeID]])) {
+          terminal_predictions_new[nodeID, ] <- colMeans(
+            original_features[
+              terminal_sampleIDs[[nodeID]],
+              ,
+              drop = FALSE
+            ]
+          )
+        }
+      }
+
+      terminal_predictions <<- terminal_predictions_new
+
+      invisible(.self)
+    },
+
 
     getTerminalPredictions = function(predict_data) {
 

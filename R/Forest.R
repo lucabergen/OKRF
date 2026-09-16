@@ -40,7 +40,7 @@ Forest <- setRefClass("Forest",
       approx_rank <<- as.integer(ncol(chol_features))
 
       ## Validate dimensions
-      if (approx_rank != x_data$nrow) {
+      if (nrow(chol_features) != x_data$nrow) {
         stop(
           "`chol_features` must have one row for each observation in `x_data`."
         )
