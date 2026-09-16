@@ -15,7 +15,8 @@ Tree <- setRefClass("Tree",
     split_varIDs = "integer",
     split_values = "numeric",
     split_levels_left = "list",
-    terminal_sampleIDs = "list"),
+    terminal_sampleIDs = "list",
+    terminal_predictions = "matrix"),
   methods = list(
 
     initialize = function(...) {
@@ -34,8 +35,12 @@ Tree <- setRefClass("Tree",
         )
       }
 
-      approx_rank <<- as.integer(
-        ncol(chol_features)
+      approx_rank <<- as.integer(ncol(chol_features))
+
+      terminal_predictions <<- matrix(
+        numeric(0),
+        nrow = 0L,
+        ncol = 0L
       )
 
       invisible(.self)
@@ -251,6 +256,7 @@ Tree <- setRefClass("Tree",
       best_split
     },
 
+
     splitNodeInternal = function(nodeID, possible_split_varIDs) {
 
       node_sampleIDs <- sampleIDs[[nodeID]]
@@ -285,30 +291,35 @@ Tree <- setRefClass("Tree",
       best_split
     },
 
-    getTerminalSampleIDs = function(predict_data) {
 
-      ## Return one element per row in predict_data
-      terminal_sampleIDs_newdata <- vector(
-        mode = "list",
-        length = predict_data$nrow
-      )
+    ## For each observation in predict_data. return one leaf node ID
+    getTerminalNodeIDs = function(predict_data) {
+
+      terminal_nodeIDs_newdata <- integer(predict_data$nrow)
 
       if (predict_data$nrow == 0L) {
-        return(terminal_sampleIDs_newdata)
+        return(terminal_nodeIDs_newdata)
       }
 
       for (i in seq_len(predict_data$nrow)) {
 
+        ## `i` is the row index of the current observation in `predict_data`.
         nodeID <- 1L
 
         while (
-          nodeID <= length(child_nodeIDs) && !is.null(child_nodeIDs[[nodeID]])
+          nodeID <= length(child_nodeIDs) &&
+          !is.null(child_nodeIDs[[nodeID]])
         ) {
 
           ## Ordered or numeric split
           if (length(split_levels_left[[nodeID]]) == 0L) {
 
-            value <- as.numeric(predict_data$subset(i,split_varIDs[nodeID]))
+            value <- as.numeric(
+              predict_data$subset(
+                i,
+                split_varIDs[nodeID]
+              )
+            )
 
             if (value <= split_values[nodeID]) {
               nodeID <- child_nodeIDs[[nodeID]][1L]
@@ -319,7 +330,10 @@ Tree <- setRefClass("Tree",
             ## Unordered factor split
           } else {
 
-            value <- predict_data$subset(i,split_varIDs[nodeID])
+            value <- predict_data$subset(
+              i,
+              split_varIDs[nodeID]
+            )
 
             if (value %in% split_levels_left[[nodeID]]) {
               nodeID <- child_nodeIDs[[nodeID]][1L]
@@ -329,11 +343,43 @@ Tree <- setRefClass("Tree",
           }
         }
 
-        terminal_sampleIDs_newdata[[i]] <- terminal_sampleIDs[[nodeID]]
+        terminal_nodeIDs_newdata[i] <- nodeID
       }
 
-      terminal_sampleIDs_newdata
-    },
+      terminal_nodeIDs_newdata
+    }
+
+
+    ## For each new observation, returns the indices of the training samples
+    ## contained in the terminal leaf reached by that observation.
+    getTerminalSampleIDs = function(predict_data) {
+
+      terminal_nodeIDs_newdata <- getTerminalNodeIDs(
+        predict_data = predict_data
+      )
+
+      lapply(
+        terminal_nodeIDs_newdata,
+        function(nodeID) {
+          terminal_sampleIDs[[nodeID]]
+        }
+      )
+    }
+
+
+    getTerminalPredictions = function(predict_data) {
+
+      if (ncol(terminal_predictions) == 0L) {
+        stop("Terminal predictions have not been initialized.")
+      }
+
+      terminal_nodeIDs <- getTerminalNodeIDs(
+        predict_data = predict_data
+      )
+
+      terminal_predictions[terminal_nodeIDs,,drop = FALSE]
+    }
+
 
     makeTerminalNode = function(nodeID) {
       # Save observation indices

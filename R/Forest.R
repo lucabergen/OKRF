@@ -11,6 +11,7 @@ Forest <- setRefClass("Forest",
     unordered_factors = "character",
     feat_rep = "list",
     chol_features = "matrix",
+    original_features = "matrix",
     tol = "numeric",
     approx_rank = "integer",
     x_data = "Data",
@@ -22,6 +23,16 @@ Forest <- setRefClass("Forest",
     initialize = function(...) {
 
       callSuper(...)
+
+      original_features <<- if (feat_rep$type == "explicit") {
+        feat_rep$Phi
+      } else {
+        matrix(
+          numeric(0),
+          nrow = 0L,
+          ncol = 0L
+        )
+      }
 
       ## Assign forest-specific Cholesky/QR features
       chol_features <- approximateFeatures(feat_rep, tol)
@@ -43,6 +54,7 @@ Forest <- setRefClass("Forest",
 
     grow = function(num_threads) {
 
+      ## Allocate empty trees
       trees <<- replicate(
         num_trees,
         Tree$new(
@@ -56,6 +68,7 @@ Forest <- setRefClass("Forest",
         simplify = FALSE
       )
 
+      ## Grow trees
       trees <<- parallel::mclapply(
         trees,
         function(tree) {
@@ -65,30 +78,32 @@ Forest <- setRefClass("Forest",
         mc.cores = num_threads
       )
 
+      ## Save leaf predictions for each tree
+      if (ncol(original_features) > 0L) {
+        for (tree in trees) {
+          tree$setTerminalPredictions(original_features = original_features)
+        }
+      }
+
       invisible(.self)
     },
 
     predict = function(newdata, type = c("weights", "response")) {
-
       type <- match.arg(type)
 
-      ## Only weights are implemented at this stage
-      if (type != "weights") {
-        stop("`type = 'response'` is not implemented yet. ")
-      }
-
-      ## Validate newdata
       if (!is.data.frame(newdata)) {
         stop("`newdata` must be a data.frame.")
       }
 
       if (ncol(newdata) != x_data$ncol) {
-        stop(paste0("`newdata` must have ", x_data$ncol, " columns."))
+        stop(
+          "`newdata` must have the same number of columns as the training data."
+        )
       }
 
       if (!identical(colnames(newdata), x_data$names)) {
         stop(
-          "`newdata` must have same column names and order as the training data."
+          "`newdata` must have the same column names and order as the training data."
         )
       }
 
@@ -96,74 +111,71 @@ Forest <- setRefClass("Forest",
         stop("The forest has not been grown yet.")
       }
 
-      ## Wrap newdata in the Data reference class
-      predict_data <- Data$new(
-        data = newdata
-      )
+      predict_data <- Data$new(data = newdata)
 
-      num_newdata <- predict_data$nrow
+      num_newdata  <- predict_data$nrow
       num_training <- x_data$nrow
-      num_trees_fitted <- length(trees)
 
-      ## Final forest weight matrix:
-      ## rows = observations in newdata,
-      ## columns = observations in the training data
+      ## Explicit Phi response prediction
+      if (type == "response") {
+
+        if (ncol(phi_features) == 0L) {
+          stop("`type = 'response'` requires explicit `Phi` features.")
+        }
+
+        forest_prediction <- matrix(
+          0,
+          nrow = num_newdata,
+          ncol = ncol(phi_features)
+        )
+
+        for (tree in trees) {
+          forest_prediction <- forest_prediction +
+            tree$getTerminalPredictions(
+              predict_data = predict_data
+            )
+        }
+
+        forest_prediction / length(trees)
+
+        ## Implicit weight prediction
+      } else {
+
       forest_weights <- matrix(
         0,
         nrow = num_newdata,
         ncol = num_training
       )
 
-      ## Process each tree
       for (tree in trees) {
 
-        ## Get the terminal-node training IDs for all new observations
         terminal_sampleIDs_newdata <- tree$getTerminalSampleIDs(
           predict_data = predict_data
         )
 
-        ## One result must exist for every row in newdata
-        if (length(terminal_sampleIDs_newdata) != num_newdata) {
-          stop(
-            paste0("Number of terminal-node results (",
-              length(terminal_sampleIDs_newdata),
-              ") does not match the number of prediction rows (",
-              num_newdata,
-              ")."
-            )
-          )
-        }
+        for (i in seq_len(num_newdata)) {
 
-        ## Convert terminal-node memberships to tree weights
-        for (i in seq_along(terminal_sampleIDs_newdata)) {
-
-          ## `i` is the row index of the current observation in `newdata`.
           terminal_sampleIDs <- terminal_sampleIDs_newdata[[i]]
 
           if (length(terminal_sampleIDs) == 0L) {
-            stop(
-              paste0("Terminal node for prediction row ",i,
-                " contains no training sample IDs."
-              )
-            )
+            next
           }
 
-          ## Count training observations in the terminal node.
-          ## Bootstrap duplicates are intentionally retained.
           sample_counts <- tabulate(
             terminal_sampleIDs,
             nbins = num_training
           )
 
-          ## Normalize the weights within this tree
           forest_weights[i, ] <- forest_weights[i, ] +
             sample_counts / length(terminal_sampleIDs)
         }
       }
 
-      ## Average over all trees
-      forest_weights / num_trees_fitted
-    },
+      # Average over all trees
+      forest_weights / length(trees)
+
+      }
+    }
 
     show = function() {
       cat("simpleOKRF Forest\n")
