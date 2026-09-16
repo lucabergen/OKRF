@@ -168,22 +168,6 @@ Forest <- setRefClass("Forest",
 
       type <- match.arg(type)
 
-      if (!is.data.frame(newdata)) {
-        stop("`newdata` must be a data.frame.")
-      }
-
-      if (ncol(newdata) != x_data$ncol) {
-        stop(
-          "`newdata` must have the same number of columns as the training data."
-        )
-      }
-
-      if (!identical(colnames(newdata), x_data$names)) {
-        stop(
-          "`newdata` must have the same column names and order as the training data."
-        )
-      }
-
       if (length(trees) == 0L) {
         stop("The forest has not been grown yet.")
       }
