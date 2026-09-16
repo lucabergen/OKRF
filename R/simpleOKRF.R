@@ -20,7 +20,64 @@
 ##' @param num_threads Number of threads used for mclapply, set to 1 for debugging.
 ##' @examples
 ##' \donttest{
-##' # TODO: Include new example
+##' set.seed(20260916)
+##'
+##' ## Covariates
+##' n <- 150L
+##'
+##' X <- data.frame(
+##'   x1 = runif(n, -3, 3),
+##'   x2 = runif(n, -3, 3)
+##' )
+##'
+##' ## Scalar output signal
+##' y <- with(
+##'   X,
+##'   sin(x1) + 0.5 * cos(2 * x2) + rnorm(n, sd = 0.1)
+##' )
+##'
+##' ## Random Fourier Features for a Gaussian output kernel
+##' num_frequencies <- 40L
+##' kernel_sigma <- 1
+##'
+##' omega <- rnorm(
+##'   num_frequencies,
+##'   mean = 0,
+##'   sd = 1 / kernel_sigma
+##' )
+##'
+##' projection <- outer(y, omega)
+##'
+##' Phi <- sqrt(1 / num_frequencies) * cbind(
+##'   cos(projection),
+##'   sin(projection)
+##' )
+##'
+##' ## Fit an Output Kernel Random Forest
+##' forest <- simpleOKRF(
+##'   Phi = Phi,
+##'   X = X,
+##'   tol = 1e-6,
+##'   num_trees = 25L,
+##'   mtry = 1L,
+##'   min_node_size = 5L,
+##'   replace = TRUE,
+##'   unordered_factors = "ignore",
+##'   num_threads = 1L
+##' )
+##'
+##' ## Predict the output representation for new covariates
+##' newdata <- data.frame(
+##'   x1 = c(-2, 0, 2),
+##'   x2 = c(-2, 0, 2)
+##' )
+##'
+##' Phi_prediction <- forest$predict(
+##'   newdata = newdata,
+##'   type = "response"
+##' )
+##'
+##' dim(Phi_prediction)
 ##' }
 ##' @author Luca Bergen
 ##' @import stats
