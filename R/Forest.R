@@ -35,17 +35,15 @@ Forest <- setRefClass("Forest",
       }
 
       ## Assign forest-specific Cholesky/QR features
-      chol_features <- approximateFeatures(feat_rep, tol)
+      chol_features <<- approximateFeatures(feat_rep, tol)
+
+      approx_rank <<- as.integer(ncol(chol_features))
 
       ## Validate dimensions
-      if (nrow(chol_features) != x_data$nrow) {
+      if (approx_rank != x_data$nrow) {
         stop(
           "`chol_features` must have one row for each observation in `x_data`."
         )
-      }
-
-      if (ncol(chol_features) != approx_rank) {
-        stop("`approx_rank` must equal `ncol(chol_features)`.")
       }
 
       invisible(.self)
@@ -120,14 +118,14 @@ Forest <- setRefClass("Forest",
       ## Explicit Phi response prediction
       if (type == "response") {
 
-        if (ncol(phi_features) == 0L) {
+        if (ncol(original_features) == 0L) {
           stop("`type = 'response'` requires explicit `Phi` features.")
         }
 
         forest_prediction <- matrix(
           0,
           nrow = num_newdata,
-          ncol = ncol(phi_features)
+          ncol = ncol(original_features)
         )
 
         for (tree in trees) {
