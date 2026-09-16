@@ -1,3 +1,20 @@
+
+approximateFeatures <- function(feat_rep, tol) {
+
+  if (feat_rep$type == "explicit") {
+    pqr_wrap(
+      X = feat_rep$Phi,
+      tol = tol
+    )
+  } else {
+    pchol_wrap(
+      K = feat_rep$K,
+      tol = tol
+    )
+  }
+}
+
+
 # Uses LAPACKs DPSTRF
 pchol_wrap <- function(K, tol) {
 

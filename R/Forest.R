@@ -23,18 +23,8 @@ Forest <- setRefClass("Forest",
 
       callSuper(...)
 
-      # TODO: Add proper feature approximation
-
-      ## Assign forest-specific Cholesky features
-      if (feat_rep$type == "explicit") {
-
-        chol_features <<- feat_rep$Phi
-
-        approx_rank <<- as.integer(ncol(chol_features))
-
-      } else {
-        stop("K-based feature construction is not implemented yet.")
-      }
+      ## Assign forest-specific Cholesky/QR features
+      chol_features <- approximateFeatures(feat_rep, tol)
 
       ## Validate dimensions
       if (nrow(chol_features) != x_data$nrow) {
