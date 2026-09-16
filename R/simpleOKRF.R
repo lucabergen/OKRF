@@ -20,7 +20,7 @@
 ##' @param num_threads Number of threads used for mclapply, set to 1 for debugging.
 ##' @examples
 ##' \donttest{
-##' TODO: Include new example
+##' # TODO: Include new example
 ##' }
 ##' @author Luca Bergen
 ##' @import stats
