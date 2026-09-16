@@ -285,6 +285,56 @@ Tree <- setRefClass("Tree",
       best_split
     },
 
+    getTerminalSampleIDs = function(predict_data) {
+
+      ## Return one element per row in predict_data
+      terminal_sampleIDs_newdata <- vector(
+        mode = "list",
+        length = predict_data$nrow
+      )
+
+      if (predict_data$nrow == 0L) {
+        return(terminal_sampleIDs_newdata)
+      }
+
+      for (i in seq_len(predict_data$nrow)) {
+
+        nodeID <- 1L
+
+        while (
+          nodeID <= length(child_nodeIDs) && !is.null(child_nodeIDs[[nodeID]])
+        ) {
+
+          ## Ordered or numeric split
+          if (length(split_levels_left[[nodeID]]) == 0L) {
+
+            value <- as.numeric(predict_data$subset(i,split_varIDs[nodeID]))
+
+            if (value <= split_values[nodeID]) {
+              nodeID <- child_nodeIDs[[nodeID]][1L]
+            } else {
+              nodeID <- child_nodeIDs[[nodeID]][2L]
+            }
+
+            ## Unordered factor split
+          } else {
+
+            value <- predict_data$subset(i,split_varIDs[nodeID])
+
+            if (value %in% split_levels_left[[nodeID]]) {
+              nodeID <- child_nodeIDs[[nodeID]][1L]
+            } else {
+              nodeID <- child_nodeIDs[[nodeID]][2L]
+            }
+          }
+        }
+
+        terminal_sampleIDs_newdata[[i]] <- terminal_sampleIDs[[nodeID]]
+      }
+
+      terminal_sampleIDs_newdata
+    },
+
     makeTerminalNode = function(nodeID) {
       # Save observation indices
       terminal_sampleIDs[[nodeID]] <<- sampleIDs[[nodeID]]

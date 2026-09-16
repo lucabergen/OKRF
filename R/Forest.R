@@ -19,7 +19,6 @@ Forest <- setRefClass("Forest",
     covariate_levels = "list"),
   methods = list(
 
-
     initialize = function(...) {
 
       callSuper(...)
@@ -31,15 +30,10 @@ Forest <- setRefClass("Forest",
 
         chol_features <<- feat_rep$Phi
 
-        approx_rank <<- as.integer(
-          ncol(chol_features)
-        )
+        approx_rank <<- as.integer(ncol(chol_features))
 
       } else {
-
-        stop(
-          "K-based feature construction is not implemented yet."
-        )
+        stop("K-based feature construction is not implemented yet.")
       }
 
       ## Validate dimensions
@@ -50,9 +44,7 @@ Forest <- setRefClass("Forest",
       }
 
       if (ncol(chol_features) != approx_rank) {
-        stop(
-          "`approx_rank` must equal `ncol(chol_features)`."
-        )
+        stop("`approx_rank` must equal `ncol(chol_features)`.")
       }
 
       invisible(.self)
@@ -87,8 +79,100 @@ Forest <- setRefClass("Forest",
     },
 
     predict = function(newdata, type = c("weights", "response")) {
-      # TODO: implement prediction; add checks if newdata has correct format
-      stop("Prediction is not implemented yet.")
+
+      type <- match.arg(type)
+
+      ## Only weights are implemented at this stage
+      if (type != "weights") {
+        stop("`type = 'response'` is not implemented yet. ")
+      }
+
+      ## Validate newdata
+      if (!is.data.frame(newdata)) {
+        stop("`newdata` must be a data.frame.")
+      }
+
+      if (ncol(newdata) != x_data$ncol) {
+        stop(paste0("`newdata` must have ", x_data$ncol, " columns."))
+      }
+
+      if (!identical(colnames(newdata), x_data$names)) {
+        stop(
+          "`newdata` must have same column names and order as the training data."
+        )
+      }
+
+      if (length(trees) == 0L) {
+        stop("The forest has not been grown yet.")
+      }
+
+      ## Wrap newdata in the Data reference class
+      predict_data <- Data$new(
+        data = newdata
+      )
+
+      num_newdata <- predict_data$nrow
+      num_training <- x_data$nrow
+      num_trees_fitted <- length(trees)
+
+      ## Final forest weight matrix:
+      ## rows = observations in newdata,
+      ## columns = observations in the training data
+      forest_weights <- matrix(
+        0,
+        nrow = num_newdata,
+        ncol = num_training
+      )
+
+      ## Process each tree
+      for (tree in trees) {
+
+        ## Get the terminal-node training IDs for all new observations
+        terminal_sampleIDs_newdata <- tree$getTerminalSampleIDs(
+          predict_data = predict_data
+        )
+
+        ## One result must exist for every row in newdata
+        if (length(terminal_sampleIDs_newdata) != num_newdata) {
+          stop(
+            paste0("Number of terminal-node results (",
+              length(terminal_sampleIDs_newdata),
+              ") does not match the number of prediction rows (",
+              num_newdata,
+              ")."
+            )
+          )
+        }
+
+        ## Convert terminal-node memberships to tree weights
+        for (i in seq_along(terminal_sampleIDs_newdata)) {
+
+          ## `i` is the row index of the current observation in `newdata`.
+          terminal_sampleIDs <- terminal_sampleIDs_newdata[[i]]
+
+          if (length(terminal_sampleIDs) == 0L) {
+            stop(
+              paste0("Terminal node for prediction row ",i,
+                " contains no training sample IDs."
+              )
+            )
+          }
+
+          ## Count training observations in the terminal node.
+          ## Bootstrap duplicates are intentionally retained.
+          sample_counts <- tabulate(
+            terminal_sampleIDs,
+            nbins = num_training
+          )
+
+          ## Normalize the weights within this tree
+          forest_weights[i, ] <- forest_weights[i, ] +
+            sample_counts / length(terminal_sampleIDs)
+        }
+      }
+
+      ## Average over all trees
+      forest_weights / num_trees_fitted
     },
 
     show = function() {
