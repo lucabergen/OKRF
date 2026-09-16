@@ -165,6 +165,7 @@ Forest <- setRefClass("Forest",
 
 
     predict = function(newdata, type = c("weights", "response")) {
+
       type <- match.arg(type)
 
       if (!is.data.frame(newdata)) {
@@ -186,6 +187,10 @@ Forest <- setRefClass("Forest",
       if (length(trees) == 0L) {
         stop("The forest has not been grown yet.")
       }
+
+      newdata <- prepareNewdata(
+        newdata = newdata
+      )
 
       predict_data <- Data$new(data = newdata)
 
