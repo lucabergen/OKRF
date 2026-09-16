@@ -88,6 +88,7 @@ Forest <- setRefClass("Forest",
       invisible(.self)
     },
 
+
     predict = function(newdata, type = c("weights", "response")) {
       type <- match.arg(type)
 
@@ -175,7 +176,7 @@ Forest <- setRefClass("Forest",
       forest_weights / length(trees)
 
       }
-    }
+    },
 
     show = function() {
       cat("simpleOKRF Forest\n")

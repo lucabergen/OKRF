@@ -347,7 +347,7 @@ Tree <- setRefClass("Tree",
       }
 
       terminal_nodeIDs_newdata
-    }
+    },
 
 
     ## For each new observation, returns the indices of the training samples
@@ -364,7 +364,7 @@ Tree <- setRefClass("Tree",
           terminal_sampleIDs[[nodeID]]
         }
       )
-    }
+    },
 
 
     getTerminalPredictions = function(predict_data) {
@@ -378,7 +378,7 @@ Tree <- setRefClass("Tree",
       )
 
       terminal_predictions[terminal_nodeIDs,,drop = FALSE]
-    }
+    },
 
 
     makeTerminalNode = function(nodeID) {
