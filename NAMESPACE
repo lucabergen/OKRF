@@ -3,5 +3,4 @@
 export(simpleOKRF)
 import(methods)
 import(stats)
-importFrom(coin,logrank_trafo)
 importFrom(parallel,mclapply)
