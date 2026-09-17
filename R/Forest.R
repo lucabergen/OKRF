@@ -255,8 +255,11 @@ Forest <- setRefClass("Forest",
       cat("Sample size:                     ", x_data$nrow, "\n")
       cat("Number of independent variables: ", x_data$ncol, "\n")
       cat("Mtry:                            ", mtry, "\n")
-      cat("Target node size:                ", min_node_size, "\n")
-      cat("Replace                          ", replace, "\n")
+      cat("Minimum split-node size:         ", min_node_size, "\n")
+      cat("Minimum terminal-node size:      ", min_leaf_size, "\n")
+      cat("Maximum tree depth:              ", max_depth, "\n")
+      cat("Replace:                         ", replace, "\n")
+      cat("Sample fraction:                 ", sample_fraction, "\n")
       cat("Unordered factor handling        ", unordered_factors, "\n")
     },
 
