@@ -199,9 +199,7 @@ Forest <- setRefClass("Forest",
 
         for (tree in trees) {
           forest_prediction <- forest_prediction +
-            tree$getTerminalPredictions(
-              predict_data = predict_data
-            )
+            tree$predictLeafValues(predict_data = predict_data)
         }
 
         forest_prediction / length(trees)
@@ -217,29 +215,25 @@ Forest <- setRefClass("Forest",
 
       for (tree in trees) {
 
-        terminal_sampleIDs_newdata <- tree$getTerminalSampleIDs(
-          predict_data = predict_data
+        leaf_train_ids <- tree$getTrainIDsByLeaf(
+          leaf_ids = tree$findLeafIDs(predict_data = predict_data)
         )
 
         for (i in seq_len(num_newdata)) {
 
-          terminal_sampleIDs <- terminal_sampleIDs_newdata[[i]]
+          train_ids <- leaf_train_ids[[i]]
 
-          if (length(terminal_sampleIDs) == 0L) {
+          if (length(train_ids) == 0L) {
             next
           }
 
-          sample_counts <- tabulate(
-            terminal_sampleIDs,
-            nbins = num_training
-          )
+          sample_counts <- tabulate(train_ids, nbins = num_training)
 
           forest_weights[i, ] <- forest_weights[i, ] +
-            sample_counts / length(terminal_sampleIDs)
+            sample_counts / length(train_ids)
         }
       }
 
-      # Average over all trees
       forest_weights / length(trees)
 
       }
