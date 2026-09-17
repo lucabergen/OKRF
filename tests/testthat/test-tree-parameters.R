@@ -131,7 +131,7 @@ test_that("sampling without replacement produces no duplicate sample IDs", {
 })
 
 
-test_that("max_depth equal to zero makes the root terminal", {
+test_that("max_depth equal to zero makes the root a leaf", {
   set.seed(20260917)
 
   n <- 20L
@@ -160,21 +160,21 @@ test_that("max_depth equal to zero makes the root terminal", {
     num_threads = 1L
   )
 
-  expect_true(all(vapply(
-    forest$trees,
-    function(tree) {
-      length(tree$child_nodeIDs) == 0L
-    },
-    logical(1)
-  )))
+  for (tree in forest$trees) {
+    expect_length(
+      tree$child_nodeIDs,
+      length(tree$sampleIDs)
+    )
 
-  expect_true(all(vapply(
-    forest$trees,
-    function(tree) {
-      length(tree$leaf_train_ids[[1L]]) == n
-    },
-    logical(1)
-  )))
+    expect_null(
+      tree$child_nodeIDs[[1L]]
+    )
+
+    expect_length(
+      tree$leaf_train_ids[[1L]],
+      n
+    )
+  }
 })
 
 
@@ -284,47 +284,61 @@ test_that("a split is only accepted when both children satisfy min_leaf_size", {
 })
 
 
-test_that("a node smaller than two min_leaf_size values cannot be split", {
-  set.seed(20260917)
+test_that(
+  "a node smaller than two min_leaf_size values cannot be split",
+  {
+    set.seed(20260917)
 
-  n <- 8L
+    n <- 8L
 
-  X <- data.frame(
-    x = seq_len(n)
-  )
+    X <- data.frame(
+      x = seq_len(n)
+    )
 
-  Phi <- matrix(
-    X$x,
-    nrow = n,
-    ncol = 1L
-  )
+    Phi <- matrix(
+      X$x,
+      nrow = n,
+      ncol = 1L
+    )
 
-  forest <- simpleOKRF(
-    Phi = Phi,
-    X = X,
-    num_trees = 1L,
-    mtry = 1L,
-    min_node_size = 2L,
-    min_leaf_size = 5L,
-    replace = FALSE,
-    sample_fraction = 1,
-    num_threads = 1L
-  )
+    forest <- simpleOKRF(
+      Phi = Phi,
+      X = X,
+      num_trees = 1L,
+      mtry = 1L,
+      min_node_size = 2L,
+      min_leaf_size = 5L,
+      replace = FALSE,
+      sample_fraction = 1,
+      num_threads = 1L
+    )
 
-  tree <- forest$trees[[1L]]
+    tree <- forest$trees[[1L]]
 
-  ## Eight observations cannot produce two children
-  ## with at least five observations each.
-  expect_length(
-    tree$child_nodeIDs,
-    0L
-  )
+    # Eight observations cannot produce two children
+    # with at least five observations each.
+    expect_length(
+      tree$sampleIDs,
+      1L
+    )
 
-  expect_equal(
-    length(tree$leaf_train_ids[[1L]]),
-    n
-  )
-})
+    # Every node has an entry in child_nodeIDs.
+    expect_length(
+      tree$child_nodeIDs,
+      length(tree$sampleIDs)
+    )
+
+    # The root is a leaf and therefore has no children.
+    expect_null(
+      tree$child_nodeIDs[[1L]]
+    )
+
+    expect_length(
+      tree$leaf_train_ids[[1L]],
+      n
+    )
+  }
+)
 
 
 test_that("invalid tree parameters are rejected", {

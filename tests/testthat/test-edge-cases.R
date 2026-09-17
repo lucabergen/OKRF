@@ -382,3 +382,72 @@ test_that("every reached leaf contains training IDs", {
     all(lengths(train_ids) > 0L)
   )
 })
+
+
+test_that("child node storage is normalized", {
+  forest <- simpleOKRF(
+    X = X,
+    Phi = Phi,
+    num_trees = 1L
+  )
+
+  tree <- forest$trees[[1L]]
+
+  expect_length(
+    tree$child_nodeIDs,
+    length(tree$sampleIDs)
+  )
+
+  invalid_child_nodes <- vapply(
+    tree$child_nodeIDs,
+    function(child_ids) {
+      if (is.null(child_ids)) {
+        return(FALSE)
+      }
+
+      length(child_ids) != 2L ||
+        anyNA(child_ids) ||
+        any(child_ids < 1L) ||
+        any(child_ids > length(tree$sampleIDs))
+    },
+    logical(1)
+  )
+
+  expect_false(
+    any(invalid_child_nodes)
+  )
+})
+
+
+test_that("leaf IDs are valid integer node IDs", {
+  forest <- simpleOKRF(
+    X = X,
+    Phi = Phi,
+    num_trees = 1L
+  )
+
+  tree <- forest$trees[[1L]]
+
+  predict_data <- Data$new(
+    data = X[1:5, , drop = FALSE]
+  )
+
+  leaf_ids <- tree$findLeafIDs(
+    predict_data = predict_data
+  )
+
+  expect_type(
+    leaf_ids,
+    "integer"
+  )
+
+  expect_true(
+    all(leaf_ids >= 1L)
+  )
+
+  expect_true(
+    all(leaf_ids <= length(tree$sampleIDs))
+  )
+})
+
+

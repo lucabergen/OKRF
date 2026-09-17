@@ -123,6 +123,19 @@ Tree <- setRefClass("Tree",
       # Call recursive splitting function on root node
       splitNode(1)
 
+      # Ensure that every node has an entry in child_nodeIDs.
+      # Leaf nodes are represented by NULL.
+      if (length(child_nodeIDs) > length(sampleIDs)) {
+        stop(
+          "`child_nodeIDs` contains more entries than `sampleIDs`."
+        )
+      }
+
+      child_nodeIDs_new <- child_nodeIDs
+      length(child_nodeIDs_new) <- length(sampleIDs)
+
+      child_nodeIDs <<- child_nodeIDs_new
+
       invisible(.self)
     },
 
@@ -370,28 +383,16 @@ Tree <- setRefClass("Tree",
 
     # Find the ID of the leaf containing the observation
     findLeafID = function(predict_data, row_id) {
+
+      # Start at root node
       nodeID <- 1L
 
       while (TRUE) {
 
-        # Detect an invalid node ID instead of silently accepting it.
-        if (is.na(nodeID) ||
-            nodeID < 1L ||
-            nodeID > length(sampleIDs)) {
-          stop(
-            "Invalid node ID encountered during tree traversal."
-          )
-        }
-
-        # A valid leaf may not have an entry in child_nodeIDs
-        if (nodeID > length(child_nodeIDs)) {
-          return(as.integer(nodeID))
-        }
-
         child_node_ids <- child_nodeIDs[[nodeID]]
 
-        # Stop when the current node is a leaf.
-        if (length(child_node_ids) == 0L || is.null(child_node_ids)) {
+        # A node without children is a leaf.
+        if (is.null(child_node_ids)) {
           return(as.integer(nodeID))
         }
 
