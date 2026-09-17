@@ -247,12 +247,14 @@ simpleOKRF <- function(
   }
 
   # tol
-  stopifnot(
+  if (
     length(tol) != 1L ||
     !is.numeric(tol) ||
     !is.finite(tol) ||
     tol <= 0
-  )
+  ) {
+    stop("tol must be a positive finite number.")
+  }
 
   # unordered_factors
   if (!(unordered_factors %in% c("ignore", "partition"))) {

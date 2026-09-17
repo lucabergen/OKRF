@@ -9,32 +9,47 @@ simpleOKRF(
   Phi = NULL,
   X,
   tol = 0.001,
-  num_trees = 200,
-  mtry = NULL,
-  min_node_size = NULL,
+  num_trees = 200L,
+  mtry = floor(sqrt(ncol(X))),
+  min_node_size = 5L,
+  max_depth = NULL,
+  min_leaf_size = 1L,
   replace = TRUE,
+  sample_fraction = ifelse(replace, 1, 0.632),
   unordered_factors = "ignore",
   num_threads = 1
 )
 }
 \arguments{
-\item{K}{Gram matrix of targets. If possible, use Phi instead of K.}
+\item{K}{Gram matrix of targets (dim. \eqn{n \times n}). If possible, use Phi instead of K.}
 
-\item{Phi}{Feature matrix of targets (\eqn{n \times d, n > d}).}
+\item{Phi}{Feature matrix of targets (dim. \eqn{n \times d, n > d}).}
 
 \item{X}{Covariate data of class \code{data.frame}, with one row per target observation.}
 
 \item{tol}{Error tolerance of approximation. Default 0.001.}
 
-\item{num_trees}{Number of trees.}
+\item{num_trees}{Number of trees. Must be a positive integer.}
 
-\item{mtry}{Number of variables to possibly split at in each node.}
+\item{mtry}{Number of covariates considered at each split.
+Default is the (rounded down) square root of the number of covariates.}
 
-\item{min_node_size}{Minimal node size. Default 5.}
+\item{min_node_size}{Minimum number of observations required in a node
+before attempting a split. Default 5.}
 
-\item{replace}{Sample with replacement. Default TRUE.}
+\item{max_depth}{Maximum tree depth. Default `NULL` means no explicit depth limit.
+The root node has depth 0.}
 
-\item{unordered_factors}{How to handle unordered factor variables. Either "ignore" or "partition" with default "ignore".}
+\item{min_leaf_size}{Minimum number of observations in a leaf node.
+Default 1.}
+
+\item{replace}{Whether observations are sampled with replacement. Default `TRUE`.}
+
+\item{sample_fraction}{Fraction of training observations sampled per tree. Must be in `(0, 1]`.
+Default is 1 for sampling with replacement and 0.632 for sampling without replacement.}
+
+\item{unordered_factors}{How to handle unordered factor variables.
+Either "ignore" or "partition" with default "ignore".}
 
 \item{num_threads}{Number of threads used for mclapply, set to 1 for debugging.}
 }

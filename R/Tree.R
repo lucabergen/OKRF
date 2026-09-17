@@ -118,6 +118,8 @@ Tree <- setRefClass("Tree",
 
     splitNode = function(nodeID, depth = 0L) {
 
+      node_sampleIDs <- sampleIDs[[nodeID]]
+
       ## A terminal node must contain at least min_leaf_size observations
       if (length(node_sampleIDs) < min_leaf_size) {
         split_varIDs[[nodeID]] <<- NA_integer_
