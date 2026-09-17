@@ -300,3 +300,85 @@ test_that("unknown factor levels are rejected after character recoding", {
     "values not present in the training data"
   )
 })
+
+
+test_that("a root-only tree routes every observation to the root", {
+  forest <- simpleOKRF(
+    X = X,
+    Phi = Phi,
+    num_trees = 1L,
+    max_depth = 0L
+  )
+
+  tree <- forest$trees[[1L]]
+
+  leaf_ids <- tree$findLeafIDs(
+    predict_data = Data$new(
+      data = X[1:3, , drop = FALSE]
+    )
+  )
+
+  expect_equal(
+    leaf_ids,
+    rep(1L, 3L)
+  )
+})
+
+
+test_that("a constant covariate routes observations to valid leaves", {
+  X_constant <- X
+
+  X_constant[, 1L] <- X_constant[1L, 1L]
+
+  forest <- simpleOKRF(
+    X = X_constant,
+    Phi = Phi,
+    num_trees = 1L
+  )
+
+  tree <- forest$trees[[1L]]
+
+  leaf_ids <- tree$findLeafIDs(
+    predict_data = Data$new(
+      data = X_constant[1:3, , drop = FALSE]
+    )
+  )
+
+  expect_true(
+    all(leaf_ids >= 1L)
+  )
+
+  expect_true(
+    all(leaf_ids <= length(tree$sampleIDs))
+  )
+})
+
+
+test_that("every reached leaf contains training IDs", {
+  forest <- simpleOKRF(
+    X = X,
+    Phi = Phi,
+    num_trees = 1L
+  )
+
+  tree <- forest$trees[[1L]]
+
+  leaf_ids <- tree$findLeafIDs(
+    predict_data = Data$new(
+      data = X[1:5, , drop = FALSE]
+    )
+  )
+
+  train_ids <- tree$getTrainIDsByLeaf(
+    leaf_ids = leaf_ids
+  )
+
+  expect_length(
+    train_ids,
+    5L
+  )
+
+  expect_true(
+    all(lengths(train_ids) > 0L)
+  )
+})

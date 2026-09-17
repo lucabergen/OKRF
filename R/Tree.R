@@ -374,6 +374,16 @@ Tree <- setRefClass("Tree",
 
       while (TRUE) {
 
+        # Detect an invalid node ID instead of silently accepting it.
+        if (is.na(nodeID) ||
+            nodeID < 1L ||
+            nodeID > length(sampleIDs)) {
+          stop(
+            "Invalid node ID encountered during tree traversal."
+          )
+        }
+
+        # A valid leaf may not have an entry in child_nodeIDs
         if (nodeID > length(child_nodeIDs)) {
           return(as.integer(nodeID))
         }
@@ -381,8 +391,7 @@ Tree <- setRefClass("Tree",
         child_node_ids <- child_nodeIDs[[nodeID]]
 
         # Stop when the current node is a leaf.
-        if (length(child_node_ids) == 0L ||
-            is.null(child_node_ids)) {
+        if (length(child_node_ids) == 0L || is.null(child_node_ids)) {
           return(as.integer(nodeID))
         }
 
@@ -422,24 +431,10 @@ Tree <- setRefClass("Tree",
       )
     },
 
-    ## TODO: Remove wrapper from code
-    getTerminalNodeIDs = function(predict_data) {
-
-      findLeafIDs(predict_data)
-
-    },
 
     # Get the IDs of the training observation contained in a leaf
     getTrainIDsByLeaf = function(leaf_ids) {
       lapply(leaf_ids, function(leaf_id) {leaf_train_ids[[leaf_id]]})
-    },
-
-    ## TODO: Remove wrapper from code
-    getTerminalSampleIDs = function(predict_data) {
-
-      leaf_ids <- findLeafIDs(predict_data)
-      getTrainIDsByLeaf(leaf_ids)
-
     },
 
 
