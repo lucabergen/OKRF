@@ -16,8 +16,8 @@ Tree <- setRefClass("Tree",
     split_varIDs = "integer",
     split_values = "numeric",
     split_levels_left = "list",
-    terminal_sampleIDs = "list",
-    terminal_predictions = "matrix",
+    leaf_train_ids = "list",
+    leaf_predictions = "matrix",
     sample_fraction = "numeric"
   ),
   methods = list(
@@ -43,8 +43,7 @@ Tree <- setRefClass("Tree",
         )
       }
 
-      terminal_predictions <<- matrix(
-        numeric(0),
+      leaf_predictions <<- matrix(
         nrow = 0L,
         ncol = 0L
       )
@@ -432,7 +431,7 @@ Tree <- setRefClass("Tree",
 
     # Get the IDs of the training observation contained in a leaf
     getTrainIDsByLeaf = function(leaf_ids) {
-      lapply(leaf_ids, function(nodeID) {terminal_sampleIDs[[nodeID]]})
+      lapply(leaf_ids, function(leaf_id) {leaf_train_ids[[leaf_id]]})
     },
 
     ## TODO: Remove wrapper from code
@@ -442,6 +441,7 @@ Tree <- setRefClass("Tree",
       getTrainIDsByLeaf(leaf_ids)
 
     },
+
 
     setTerminalPredictions = function(response_features) {
 
@@ -458,25 +458,24 @@ Tree <- setRefClass("Tree",
       num_nodes <- length(sampleIDs)
       num_features <- ncol(response_features)
 
-      terminal_predictions_new <- matrix(
+      leaf_predictions_new <- matrix(
         0,
         nrow = num_nodes,
         ncol = num_features
       )
 
       for (nodeID in seq_len(num_nodes)) {
-        if (!is.null(terminal_sampleIDs[[nodeID]])) {
-          terminal_predictions_new[nodeID, ] <- colMeans(
-            response_features[
-              terminal_sampleIDs[[nodeID]],
-              ,
-              drop = FALSE
-            ]
+
+        train_ids <- leaf_train_ids[[nodeID]]
+
+        if (length(train_ids) > 0L) {
+          leaf_predictions_new[nodeID, ] <- colMeans(
+            response_features[train_ids,,drop = FALSE]
           )
         }
       }
 
-      terminal_predictions <<- terminal_predictions_new
+      leaf_predictions <<- leaf_predictions_new
 
       invisible(.self)
     },
@@ -485,8 +484,12 @@ Tree <- setRefClass("Tree",
     # Predict the stored values for every observation.
     predictLeafValues = function(predict_data) {
 
-      leaf_ids <- findLeafIDs(predict_data)
-      terminal_predictions[leaf_ids,,drop = FALSE]
+      if (ncol(leaf_predictions) == 0L) {
+        stop("Leaf predictions have not been initialized.")
+      }
+
+      leaf_ids <- findLeafIDs(predict_data = predict_data)
+      leaf_predictions[leaf_ids,,drop = FALSE]
 
     },
 
@@ -500,8 +503,8 @@ Tree <- setRefClass("Tree",
 
 
     makeTerminalNode = function(nodeID) {
-      # Save observation indices
-      terminal_sampleIDs[[nodeID]] <<- sampleIDs[[nodeID]]
+      ## Save observation indices
+      leaf_train_ids[[nodeID]] <<- sampleIDs[[nodeID]]
     }
 
     )

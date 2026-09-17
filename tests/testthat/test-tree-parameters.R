@@ -171,7 +171,7 @@ test_that("max_depth equal to zero makes the root terminal", {
   expect_true(all(vapply(
     forest$trees,
     function(tree) {
-      length(tree$terminal_sampleIDs[[1L]]) == n
+      length(tree$leaf_train_ids[[1L]]) == n
     },
     logical(1)
   )))
@@ -211,9 +211,9 @@ test_that("all terminal nodes satisfy min_leaf_size", {
     lapply(
       forest$trees,
       function(tree) {
-        terminal_nodes <- tree$terminal_sampleIDs[
+        terminal_nodes <- tree$leaf_train_ids[
           !vapply(
-            tree$terminal_sampleIDs,
+            tree$leaf_train_ids,
             is.null,
             logical(1)
           )
@@ -275,7 +275,7 @@ test_that("a split is only accepted when both children satisfy min_leaf_size", {
   child_sizes <- vapply(
     child_ids,
     function(child_id) {
-      length(tree$terminal_sampleIDs[[child_id]])
+      length(tree$leaf_train_ids[[child_id]])
     },
     integer(1)
   )
@@ -321,7 +321,7 @@ test_that("a node smaller than two min_leaf_size values cannot be split", {
   )
 
   expect_equal(
-    length(tree$terminal_sampleIDs[[1L]]),
+    length(tree$leaf_train_ids[[1L]]),
     n
   )
 })
