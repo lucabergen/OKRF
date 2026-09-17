@@ -369,79 +369,78 @@ Tree <- setRefClass("Tree",
       best_split
     },
 
+    # Find the ID of the leaf containing the observation
+    findLeafID = function(predict_data, row_id) {
+      nodeID <- 1L
 
-    ## For each observation in predict_data. return one leaf node ID
-    getTerminalNodeIDs = function(predict_data) {
+      while (TRUE) {
 
-      terminal_nodeIDs_newdata <- integer(predict_data$nrow)
+        if (nodeID > length(child_nodeIDs)) {
+          return(as.integer(nodeID))
+        }
 
-      if (predict_data$nrow == 0L) {
-        return(terminal_nodeIDs_newdata)
-      }
+        child_node_ids <- child_nodeIDs[[nodeID]]
 
-      for (i in seq_len(predict_data$nrow)) {
+        # Stop when the current node is a leaf.
+        if (length(child_node_ids) == 0L ||
+            is.null(child_node_ids)) {
+          return(as.integer(nodeID))
+        }
 
-        ## `i` is the row index of the current observation in `predict_data`.
-        nodeID <- 1L
+        split_var <- split_varIDs[nodeID]
+        value <- predict_data$subset(row_id, split_var)
 
-        while (
-          nodeID <= length(child_nodeIDs) &&
-          !is.null(child_nodeIDs[[nodeID]])
-        ) {
-
-          ## Ordered or numeric split
-          if (length(split_levels_left[[nodeID]]) == 0L) {
-
-            value <- as.numeric(
-              predict_data$subset(
-                i,
-                split_varIDs[nodeID]
-              )
-            )
-
-            if (value <= split_values[nodeID]) {
-              nodeID <- child_nodeIDs[[nodeID]][1L]
-            } else {
-              nodeID <- child_nodeIDs[[nodeID]][2L]
-            }
-
-            ## Unordered factor split
+        # Follow the left or right child for ordered splits.
+        if (length(split_levels_left[[nodeID]]) == 0L) {
+          if (as.numeric(value) <= split_values[nodeID]) {
+            nodeID <- child_node_ids[[1L]]
           } else {
+            nodeID <- child_node_ids[[2L]]
+          }
 
-            value <- predict_data$subset(
-              i,
-              split_varIDs[nodeID]
-            )
-
-            if (value %in% split_levels_left[[nodeID]]) {
-              nodeID <- child_nodeIDs[[nodeID]][1L]
-            } else {
-              nodeID <- child_nodeIDs[[nodeID]][2L]
-            }
+          # Follow the left or right child for factor splits.
+        } else {
+          if (value %in% split_levels_left[[nodeID]]) {
+            nodeID <- child_node_ids[[1L]]
+          } else {
+            nodeID <- child_node_ids[[2L]]
           }
         }
-
-        terminal_nodeIDs_newdata[i] <- nodeID
       }
-
-      terminal_nodeIDs_newdata
     },
 
+    # Find the ID of the leaf reached for every observation
+    findLeafIDs = function(predict_data) {
+      vapply(
+        seq_len(predict_data$nrow),
+        function(row_id) {
+          findLeafID(
+            predict_data = predict_data,
+            row_id = row_id
+          )
+        },
+        integer(1)
+      )
+    },
 
-    ## For each new observation, returns the indices of the training samples
-    ## contained in the terminal leaf reached by that observation.
+    ## TODO: Remove wrapper from code
+    getTerminalNodeIDs = function(predict_data) {
+
+      findLeafIDs(predict_data)
+
+    },
+
+    # Get the IDs of the training observation contained in a leaf
+    getTrainIDsByLeaf = function(leaf_ids) {
+      lapply(leaf_ids, function(nodeID) {terminal_sampleIDs[[nodeID]]})
+    },
+
+    ## TODO: Remove wrapper from code
     getTerminalSampleIDs = function(predict_data) {
 
-      terminal_nodeIDs_newdata <- getTerminalNodeIDs(
-        predict_data = predict_data
-      )
+      leaf_ids <- findLeafIDs(predict_data)
+      getTrainIDsByLeaf(leaf_ids)
 
-      lapply(
-        terminal_nodeIDs_newdata,
-        function(nodeID) {
-          terminal_sampleIDs[[nodeID]]
-        }
-      )
     },
 
     setTerminalPredictions = function(response_features) {
@@ -483,17 +482,20 @@ Tree <- setRefClass("Tree",
     },
 
 
+    # Predict the stored values for every observation.
+    predictLeafValues = function(predict_data) {
+
+      leaf_ids <- findLeafIDs(predict_data)
+      terminal_predictions[leaf_ids,,drop = FALSE]
+
+    },
+
+
+    ## TODO: Remove wrapper from code
     getTerminalPredictions = function(predict_data) {
 
-      if (ncol(terminal_predictions) == 0L) {
-        stop("Terminal predictions have not been initialized.")
-      }
+      predictLeafValues(predict_data)
 
-      terminal_nodeIDs <- getTerminalNodeIDs(
-        predict_data = predict_data
-      )
-
-      terminal_predictions[terminal_nodeIDs,,drop = FALSE]
     },
 
 
