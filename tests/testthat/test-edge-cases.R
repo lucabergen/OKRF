@@ -48,7 +48,7 @@ test_that("feature representations are validated", {
 
   expect_error(
     simpleOKRF(Phi = matrix(seq_len(10), nrow = 5L, ncol = 2L), X = X),
-    "same numer of rows as X"
+    "same number of rows as X"
   )
 
   ## The implementation requires more rows than explicit feature columns.
