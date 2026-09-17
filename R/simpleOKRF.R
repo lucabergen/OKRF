@@ -102,7 +102,7 @@ simpleOKRF <- function(K = NULL, Phi = NULL, X,
       stop("Phi must be a numeric matrix.")
     }
     if (nrow(Phi) != nrow(X)) {
-      stop("Phi must have the same numer of rows as X.")
+      stop("Phi must have the same number of rows as X.")
     }
     if (nrow(Phi) <= ncol(Phi)) {
       stop("Phi must have fewer columns than rows.")

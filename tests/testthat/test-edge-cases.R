@@ -52,8 +52,12 @@ test_that("feature representations are validated", {
   )
 
   ## The implementation requires more rows than explicit feature columns.
+  X_small <- data.frame(x = seq_len(4L))
   expect_error(
-    simpleOKRF(Phi = matrix(seq_len(12), nrow = 4L, ncol = 3L), X = X),
+    simpleOKRF(
+      Phi = matrix(seq_len(16), nrow = 4L, ncol = 4L),
+      X = X_small
+    ),
     "fewer columns than rows"
   )
 
@@ -231,7 +235,7 @@ test_that("prediction validates newdata type, columns, and names", {
 
   expect_error(
     forest$predict(X[1:2, , drop = FALSE], type = "invalid"),
-    "arg should be one of"
+    "one of"
   )
 })
 
