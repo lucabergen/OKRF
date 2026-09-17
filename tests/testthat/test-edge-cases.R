@@ -118,7 +118,7 @@ test_that("scalar numeric parameters are validated", {
 
   expect_error(
     simpleOKRF(Phi = Phi, X = X, mtry = 2L),
-    "Mtry cannot be larger"
+    "mtry must be an integer between 1 and the number of covariates."
   )
 
   expect_error(

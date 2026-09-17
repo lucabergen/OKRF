@@ -256,6 +256,19 @@ simpleOKRF <- function(
     stop("tol must be a positive finite number.")
   }
 
+  # num_threads
+  if (
+    length(num_threads) != 1L ||
+    !is.numeric(num_threads) ||
+    !is.finite(num_threads) ||
+    num_threads < 1 ||
+    num_threads != as.integer(num_threads)
+  ) {
+    stop("num_threads must be a positive integer.")
+  }
+
+  num_threads <- as.integer(num_threads)
+
   # unordered_factors
   if (!(unordered_factors %in% c("ignore", "partition"))) {
     stop("Unknown value for unordered_factors.")
