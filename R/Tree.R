@@ -9,8 +9,7 @@ Tree <- setRefClass("Tree",
     min_leaf_size = "integer",
     unordered_factors = "character",
     x_data = "Data",
-    chol_features = "matrix",
-    approx_rank = "integer",
+    prepared_features = "list",
     sampleIDs = "list",
     oob_sampleIDs = "integer",
     child_nodeIDs = "list",
@@ -27,19 +26,22 @@ Tree <- setRefClass("Tree",
 
       callSuper(...)
 
-      if (!is.matrix(chol_features)) {
+      if (!is.list(prepared_features)) {
+        stop("`prepared_features` must be a list.")
+      }
+
+      if (!is.matrix(prepared_features$split_features)) {
         stop(
-          "`chol_features` must be a matrix."
+          "`prepared_features$split_features` must be a matrix."
         )
       }
 
-      if (nrow(chol_features) != x_data$nrow) {
+      if (nrow(prepared_features$split_features) != x_data$nrow) {
         stop(
-          "`chol_features` must have one row for each observation in `x_data`."
+          "`prepared_features$split_features` must have one row for each ",
+          "observation in `x_data`."
         )
       }
-
-      approx_rank <<- as.integer(ncol(chol_features))
 
       terminal_predictions <<- matrix(
         numeric(0),
@@ -53,18 +55,30 @@ Tree <- setRefClass("Tree",
     grow = function(replace) {
 
       ## Validate Cholesky features
-      if (nrow(chol_features) != x_data$nrow) {
+      if (!is.list(prepared_features)) {
+        stop("`prepared_features` must be a list.")
+      }
+
+      if (!is.matrix(prepared_features$split_features)) {
+        stop("`prepared_features$split_features` must be a matrix.")
+      }
+
+      if (nrow(prepared_features$split_features) != x_data$nrow) {
         stop(
-          "`chol_features` must have one row for each row in `x_data`."
+          "`prepared_features$split_features` must have one row for each ",
+          "row in `x_data`."
         )
       }
 
-      if (ncol(chol_features) != approx_rank) {
+      if (length(prepared_features$rank) != 1L ||
+          !is.numeric(prepared_features$rank) ||
+          !is.finite(prepared_features$rank) ||
+          prepared_features$rank != ncol(prepared_features$split_features)) {
         stop(
-          "`approx_rank` must equal `ncol(chol_features)`."
+          "`prepared_features$rank` must equal ",
+          "`ncol(prepared_features$split_features)`."
         )
       }
-
 
       ## Boostrap
       num_samples <- x_data$nrow
@@ -73,10 +87,7 @@ Tree <- setRefClass("Tree",
         sample_fraction * num_samples
       )
 
-      if (
-        !replace &&
-        num_bootstrap_samples > num_samples
-      ) {
+      if (!replace && num_bootstrap_samples > num_samples) {
         stop(
           "sample_fraction cannot produce more samples than available ",
           "when replace is FALSE."
@@ -251,8 +262,9 @@ Tree <- setRefClass("Tree",
 
       ordered_values <- ordered_values[order_idx]
 
-      ordered_chol_features <- chol_features[node_sampleIDs[order_idx],
-                                             ,drop = FALSE]
+      ordered_split_features <- prepared_features$split_features[
+        node_sampleIDs[order_idx],,drop = FALSE
+      ]
 
       num_samples <- length(ordered_values)
 
@@ -266,8 +278,8 @@ Tree <- setRefClass("Tree",
       }
 
       ## Initially all observations are in the right child
-      sum_left <- numeric(approx_rank)
-      sum_right <- colSums(ordered_chol_features)
+      sum_left <- numeric(length = prepared_features$rank)
+      sum_right <- colSums(ordered_split_features)
 
       n_left <- 0L
       n_right <- num_samples
@@ -276,7 +288,7 @@ Tree <- setRefClass("Tree",
       for (group_end in group_ends) {
 
         ## Move one complete value group from right to left
-        group_features <- ordered_chol_features[group_start:group_end,,
+        group_features <- ordered_split_features[group_start:group_end,,
                                                 drop = FALSE]
 
         group_sum <- colSums(group_features)
@@ -331,7 +343,9 @@ Tree <- setRefClass("Tree",
 
 
       ## Score of the unsplit node
-      node_features <- chol_features[node_sampleIDs,,drop = FALSE]
+      split_features <- prepared_features$split_features
+
+      node_features <- split_features[node_sampleIDs,,drop = FALSE]
 
       node_sum <- colSums(node_features)
 
@@ -430,20 +444,20 @@ Tree <- setRefClass("Tree",
       )
     },
 
-    setTerminalPredictions = function(original_features) {
+    setTerminalPredictions = function(response_features) {
 
-      if (!is.matrix(original_features)) {
-        stop("`original_features` must be a matrix.")
+      if (!is.matrix(response_features)) {
+        stop("`response_features` must be a matrix.")
       }
 
-      if (nrow(original_features) != x_data$nrow) {
+      if (nrow(response_features) != x_data$nrow) {
         stop(
-          "`original_features` must have one row for each observation in `x_data`."
+          "`response_features` must have one row for each observation in `x_data`."
         )
       }
 
       num_nodes <- length(sampleIDs)
-      num_features <- ncol(original_features)
+      num_features <- ncol(response_features)
 
       terminal_predictions_new <- matrix(
         0,
@@ -454,7 +468,7 @@ Tree <- setRefClass("Tree",
       for (nodeID in seq_len(num_nodes)) {
         if (!is.null(terminal_sampleIDs[[nodeID]])) {
           terminal_predictions_new[nodeID, ] <- colMeans(
-            original_features[
+            response_features[
               terminal_sampleIDs[[nodeID]],
               ,
               drop = FALSE

@@ -1,4 +1,5 @@
 
+##' Compute approximate features used by the OKRF tree in splitting
 approximateFeatures <- function(feat_rep, tol) {
 
   if (feat_rep$type == "explicit") {
@@ -14,8 +15,9 @@ approximateFeatures <- function(feat_rep, tol) {
   }
 }
 
-
-# Uses LAPACKs DPSTRF
+##' Compute approximate features by pivoted Cholesky
+##'
+##' Uses LAPACKs DPSTRF
 pchol_wrap <- function(K, tol) {
 
   C <- suppressWarnings(
@@ -35,6 +37,8 @@ pchol_wrap <- function(K, tol) {
   L
 }
 
+##' Compute approximate features by pivoted QR used in splitting
+##'
 # Note that this uses DGEQP3, which does not stop at the specified tolerance, but
 # computes the complete pivoted QR and then selects the lower rank corresponding
 # to tol. This is only offered by DGEQP3RK, which can only be used via a Rcpp wrapper.
@@ -64,20 +68,43 @@ pqr_wrap <- function(X, tol) {
   L
 }
 
-# # Test if these return the same result
-# n = 5000
-# x1 <- rnorm(n)
-# x2 <- rnorm(n)
-# y <- 0.7*x1 + 0.2*x2^2 - 0.3*x1*x2 + rnorm(n)
-# # compute RFFs
-# omega <- rnorm(100, mean = 0, sd = 1)
-# projection <- outer(y, omega)
-# Y <- sqrt(1 / 100) * cbind(cos(projection), sin(projection))
-# K <- tcrossprod(Y)
-#
-# ch <- pchol_wrap(K, tol = 1e-4)
-# qr <- pqr_wrap(Y, tol = 1e-4)
-#
-# dim(ch)
-# dim(qr)
-# all.equal(qr, ch)
+##' Prepare features used by the OKRF tree
+##'
+##' `feat_rep` contains the original output representation, either `Phi`
+##' or `K`. The returned object separates features used for splitting
+##' from features used for terminal response predictions.
+prepareFeatures <- function(feat_rep, tol, scope = "forest", reference_ids = NULL) {
+
+  scope <- match.arg(scope, c("forest", "tree"))
+
+  ## The current implementation is forest-level.
+  ## Tree-level preparation will use reference_ids in a later step.
+  if (scope == "tree") {
+    stop(
+      "Tree-level feature preparation is not implemented yet."
+    )
+  }
+
+  split_features <- approximateFeatures(
+    feat_rep = feat_rep,
+    tol = tol
+  )
+
+  response_features <- if (identical(feat_rep$type, "explicit")) {
+    feat_rep$Phi
+  } else {
+    matrix(
+      numeric(0),
+      nrow = 0L,
+      ncol = 0L
+    )
+  }
+
+  list(
+    split_features = split_features,
+    response_features = response_features,
+    rank = as.integer(ncol(split_features)),
+    scope = scope,
+    reference_ids = reference_ids
+  )
+}

@@ -12,10 +12,8 @@ Forest <- setRefClass("Forest",
     min_leaf_size = "integer",
     unordered_factors = "character",
     feat_rep = "list",
-    chol_features = "matrix",
-    original_features = "matrix",
+    prepared_features = "list",
     tol = "numeric",
-    approx_rank = "integer",
     x_data = "Data",
     trees = "list",
     replace = "logical",
@@ -28,25 +26,17 @@ Forest <- setRefClass("Forest",
 
       callSuper(...)
 
-      original_features <<- if (feat_rep$type == "explicit") {
-        feat_rep$Phi
-      } else {
-        matrix(
-          numeric(0),
-          nrow = 0L,
-          ncol = 0L
-        )
-      }
+      prepared_features <<- prepareFeatures(
+        feat_rep = feat_rep,
+        tol = tol,
+        scope = "forest",
+        reference_ids = seq_len(x_data$nrow)
+      )
 
-      ## Assign forest-specific Cholesky/QR features
-      chol_features <<- approximateFeatures(feat_rep, tol)
-
-      approx_rank <<- as.integer(ncol(chol_features))
-
-      ## Validate dimensions
-      if (nrow(chol_features) != x_data$nrow) {
+      if (nrow(prepared_features$split_features) != x_data$nrow) {
         stop(
-          "`chol_features` must have one row for each observation in `x_data`."
+          "`prepared_features$split_features` must have one row for each ",
+          "observation in `x_data`."
         )
       }
 
@@ -71,8 +61,7 @@ Forest <- setRefClass("Forest",
           min_leaf_size = min_leaf_size,
           unordered_factors = unordered_factors,
           x_data = x_data,
-          chol_features = chol_features,
-          approx_rank = approx_rank,
+          prepared_features = prepared_features,
           sample_fraction = sample_fraction
         ),
         simplify = FALSE
@@ -89,9 +78,11 @@ Forest <- setRefClass("Forest",
       )
 
       ## Save leaf predictions for each tree
-      if (ncol(original_features) > 0L) {
+      if (ncol(prepared_features$response_features) > 0L) {
         for (tree in trees) {
-          tree$setTerminalPredictions(original_features = original_features)
+          tree$setTerminalPredictions(
+            response_features = prepared_features$response_features
+          )
         }
       }
 
@@ -191,14 +182,19 @@ Forest <- setRefClass("Forest",
       ## Explicit Phi response prediction
       if (type == "response") {
 
-        if (ncol(original_features) == 0L) {
-          stop("`type = 'response'` requires explicit `Phi` features.")
+        response_features <- prepared_features$response_features
+
+        if (!is.matrix(response_features) ||
+            ncol(response_features) == 0L) {
+          stop(
+            "`type = 'response'` requires explicit `Phi` features."
+          )
         }
 
         forest_prediction <- matrix(
           0,
           nrow = num_newdata,
-          ncol = ncol(original_features)
+          ncol = ncol(prepared_features$response_features)
         )
 
         for (tree in trees) {
