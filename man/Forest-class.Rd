@@ -6,7 +6,6 @@
 \alias{Forest}
 \title{Forest class}
 \description{
-Virtual class for Random forest. 
-Contains all fields and methods used in all Forest subclasses.
+Output kernel random forest.
 }
 

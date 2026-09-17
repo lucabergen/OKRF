@@ -1,16 +1,18 @@
-Package: simpleRF
+Package: simpleOKRF
 Type: Package
-Title: Random Forests with emphasis on simplicity
+Title: A simple implementation of Output Kernel Random Forests
 Version: 0.1.5
 Date: 2022-03-07
-Author: Marvin N. Wright
-Maintainer: Marvin N. Wright <marv@wrig.de>
-Description: Uses reference classes and only plain R. Not optimized for
-    computation speed. Allows rapid prototyping of RF-type algorithms.
+Author: Luca Bergen
+Maintainer: Luca Bergen <lucabergen@yahoo.com>
+Description: Somewhat slow.
 License: GPL-3
 Imports:
     methods,
     ipred, 
     coin
-Suggests: survival
-RoxygenNote: 6.1.0
+Suggests: 
+    survival,
+    testthat (>= 3.0.0)
+Config/roxygen2/version: 8.1.0
+Config/testthat/edition: 3
