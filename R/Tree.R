@@ -443,7 +443,7 @@ Tree <- setRefClass("Tree",
     },
 
 
-    setTerminalPredictions = function(response_features) {
+    setLeafPredictions = function(response_features) {
 
       if (!is.matrix(response_features)) {
         stop("`response_features` must be a matrix.")
@@ -468,6 +468,7 @@ Tree <- setRefClass("Tree",
 
         train_ids <- leaf_train_ids[[nodeID]]
 
+        # Internal nodes do not have leaf predictions
         if (length(train_ids) > 0L) {
           leaf_predictions_new[nodeID, ] <- colMeans(
             response_features[train_ids,,drop = FALSE]
@@ -490,14 +491,6 @@ Tree <- setRefClass("Tree",
 
       leaf_ids <- findLeafIDs(predict_data = predict_data)
       leaf_predictions[leaf_ids,,drop = FALSE]
-
-    },
-
-
-    ## TODO: Remove wrapper from code
-    getTerminalPredictions = function(predict_data) {
-
-      predictLeafValues(predict_data)
 
     },
 

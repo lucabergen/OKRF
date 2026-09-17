@@ -78,10 +78,12 @@ Forest <- setRefClass("Forest",
       )
 
       ## Save leaf predictions for each tree
-      if (ncol(prepared_features$response_features) > 0L) {
+      response_features <- prepared_features$response_features
+
+      if (ncol(response_features) > 0L) {
         for (tree in trees) {
-          tree$setTerminalPredictions(
-            response_features = prepared_features$response_features
+          tree$setLeafPredictions(
+            response_features = response_features
           )
         }
       }
