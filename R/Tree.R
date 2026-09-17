@@ -5,6 +5,8 @@ Tree <- setRefClass("Tree",
   fields = list(
     mtry = "integer",
     min_node_size = "integer",
+    max_depth = "integer",
+    min_leaf_size = "integer",
     unordered_factors = "character",
     x_data = "Data",
     chol_features = "matrix",
@@ -16,7 +18,9 @@ Tree <- setRefClass("Tree",
     split_values = "numeric",
     split_levels_left = "list",
     terminal_sampleIDs = "list",
-    terminal_predictions = "matrix"),
+    terminal_predictions = "matrix",
+    sample_fraction = "numeric"
+  ),
   methods = list(
 
     initialize = function(...) {
@@ -65,10 +69,31 @@ Tree <- setRefClass("Tree",
       ## Boostrap
       num_samples <- x_data$nrow
 
-      if (replace) {
-        num_bootstrap_samples <- num_samples
-      } else {
-        num_bootstrap_samples <- floor(0.6321 * num_samples)
+      num_bootstrap_samples <- floor(
+        sample_fraction * num_samples
+      )
+
+      if (
+        !replace &&
+        num_bootstrap_samples > num_samples
+      ) {
+        stop(
+          "sample_fraction cannot produce more samples than available ",
+          "when replace is FALSE."
+        )
+      }
+
+      if (num_bootstrap_samples < 1L) {
+        stop(
+          "sample_fraction must select at least one observation."
+        )
+      }
+
+      if (num_bootstrap_samples < min_leaf_size) {
+        stop(
+          "The sampled training data contains fewer observations ",
+          "than min_leaf_size."
+        )
       }
 
       bootstrap_sample <- sample.int(
@@ -91,7 +116,30 @@ Tree <- setRefClass("Tree",
       invisible(.self)
     },
 
-    splitNode = function(nodeID) {
+    splitNode = function(nodeID, depth = 0L) {
+
+      ## A terminal node must contain at least min_leaf_size observations
+      if (length(node_sampleIDs) < min_leaf_size) {
+        split_varIDs[[nodeID]] <<- NA_integer_
+        makeTerminalNode(nodeID)
+        return(invisible(NULL))
+      }
+
+      ## A binary split requires two children of at least
+      ## min_leaf_size observations each
+      if (length(node_sampleIDs) < 2L * min_leaf_size) {
+        split_varIDs[[nodeID]] <<- NA_integer_
+        makeTerminalNode(nodeID)
+        return(invisible(NULL))
+      }
+
+      ## Stop at the maximum depth
+      if (!is.na(max_depth) && depth >= max_depth) {
+        split_varIDs[[nodeID]] <<- NA_integer_
+        makeTerminalNode(nodeID)
+        return(invisible(NULL))
+      }
+
       ## Sample possible split variables
       possible_split_varIDs <- sample.int(
         n = x_data$ncol,
@@ -131,8 +179,16 @@ Tree <- setRefClass("Tree",
         sampleIDs[[right_child]] <<- sampleIDs[[nodeID]][!idx]
 
         ## Recursively call split node on child nodes
-        splitNode(left_child)
-        splitNode(right_child)
+        splitNode(
+          nodeID = left_child,
+          depth = depth + 1L
+        )
+
+        splitNode(
+          nodeID = right_child,
+          depth = depth + 1L
+        )
+
       } else {
         # Unlike in normal regression trees, leafs do not include predictions,
         # but observation indices (possibly with repetitions due to bootstrap)
@@ -230,8 +286,8 @@ Tree <- setRefClass("Tree",
         n_left <- n_left + group_size
         n_right <- n_right - group_size
 
-        ## Respect min_node_size
-        if (n_left >= min_node_size && n_right >= min_node_size) {
+        ## Only admissible leaf node sizes are considered
+        if (n_left >= min_leaf_size && n_right >= min_leaf_size){
 
           score <- sum(sum_left^2) / n_left + sum(sum_right^2) / n_right
 
@@ -261,10 +317,16 @@ Tree <- setRefClass("Tree",
 
       node_sampleIDs <- sampleIDs[[nodeID]]
 
-      ## No further split if the node is too small
-      if (length(node_sampleIDs) < 2L * min_node_size) {
+      ## Do not attempt a split below min_node_size
+      if (length(node_sampleIDs) < min_node_size) {
         return(NULL)
       }
+
+      ## A binary split gives two children with at least min_leaf_size obs. each
+      if (length(node_sampleIDs) < 2L * min_leaf_size) {
+        return(NULL)
+      }
+
 
       ## Score of the unsplit node
       node_features <- chol_features[node_sampleIDs,,drop = FALSE]

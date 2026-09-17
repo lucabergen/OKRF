@@ -8,6 +8,8 @@ Forest <- setRefClass("Forest",
     num_trees = "integer",
     mtry = "integer",
     min_node_size = "integer",
+    max_depth = "integer",
+    min_leaf_size = "integer",
     unordered_factors = "character",
     feat_rep = "list",
     chol_features = "matrix",
@@ -17,7 +19,9 @@ Forest <- setRefClass("Forest",
     x_data = "Data",
     trees = "list",
     replace = "logical",
-    covariate_levels = "list"),
+    sample_fraction = "numeric",
+    covariate_levels = "list"
+  ),
   methods = list(
 
     initialize = function(...) {
@@ -63,10 +67,13 @@ Forest <- setRefClass("Forest",
         Tree$new(
           mtry = mtry,
           min_node_size = min_node_size,
+          max_depth = max_depth,
+          min_leaf_size = min_leaf_size,
           unordered_factors = unordered_factors,
           x_data = x_data,
           chol_features = chol_features,
-          approx_rank = approx_rank
+          approx_rank = approx_rank,
+          sample_fraction = sample_fraction
         ),
         simplify = FALSE
       )

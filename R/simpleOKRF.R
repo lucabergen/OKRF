@@ -8,15 +8,24 @@
 ##' With "partition" all 2-partitions of the factor levels are considered for splitting.
 ##'
 ##' @title simpleOKRF
-##' @param K Gram matrix of targets. If possible, use Phi instead of K.
-##' @param Phi Feature matrix of targets (\eqn{n \times d, n > d}).
+##' @param K Gram matrix of targets (dim. \eqn{n \times n}). If possible, use Phi instead of K.
+##' @param Phi Feature matrix of targets (dim. \eqn{n \times d, n > d}).
 ##' @param X Covariate data of class \code{data.frame}, with one row per target observation.
 ##' @param tol Error tolerance of approximation. Default 0.001.
-##' @param num_trees Number of trees.
-##' @param mtry Number of variables to possibly split at in each node.
-##' @param min_node_size Minimal node size. Default 5.
-##' @param replace Sample with replacement. Default TRUE.
-##' @param unordered_factors How to handle unordered factor variables. Either "ignore" or "partition" with default "ignore".
+##' @param num_trees Number of trees. Must be a positive integer.
+##' @param mtry Number of covariates considered at each split.
+##'   Default is the (rounded down) square root of the number of covariates.
+##' @param min_node_size Minimum number of observations required in a node
+##'   before attempting a split. Default 5.
+##' @param max_depth Maximum tree depth. Default `NULL` means no explicit depth limit.
+##'   The root node has depth 0.
+##' @param min_leaf_size Minimum number of observations in a leaf node.
+##'   Default 1.
+##' @param replace Whether observations are sampled with replacement. Default `TRUE`.
+##' @param sample_fraction Fraction of training observations sampled per tree. Must be in `(0, 1]`.
+##'   Default is 1 for sampling with replacement and 0.632 for sampling without replacement.
+##' @param unordered_factors How to handle unordered factor variables.
+##'   Either "ignore" or "partition" with default "ignore".
 ##' @param num_threads Number of threads used for mclapply, set to 1 for debugging.
 ##' @examples
 ##' \donttest{
@@ -66,11 +75,20 @@
 ##' @author Luca Bergen
 ##' @import stats
 ##' @export
-simpleOKRF <- function(K = NULL, Phi = NULL, X,
-                       tol = 1e-3, num_trees = 200, mtry = NULL,
-                       min_node_size = NULL, replace = TRUE,
-                       unordered_factors = "ignore",
-                       num_threads = 1) {
+simpleOKRF <- function(
+    K = NULL,
+    Phi = NULL,
+    X,
+    tol = 1e-3,
+    num_trees = 200L,
+    mtry = floor(sqrt(ncol(X))),
+    min_node_size = 5L,
+    max_depth = NULL,
+    min_leaf_size = 1L,
+    replace = TRUE,
+    sample_fraction = ifelse(replace, 1, 0.632),
+    unordered_factors = "ignore",
+    num_threads = 1) {
 
   ## Check parameters
 
@@ -88,7 +106,100 @@ simpleOKRF <- function(K = NULL, Phi = NULL, X,
     stop("Missing values in split covariates are not supported.")
   }
 
-  # Feature representation
+  # num_trees
+  if (
+    length(num_trees) != 1L ||
+    !is.numeric(num_trees) ||
+    !is.finite(num_trees) ||
+    num_trees < 1 ||
+    num_trees != as.integer(num_trees)
+  ) {
+    stop("num_trees must be a positive integer.")
+  }
+
+  num_trees <- as.integer(num_trees)
+
+  # mtry
+  if (
+    length(mtry) != 1L ||
+    !is.numeric(mtry) ||
+    !is.finite(mtry) ||
+    mtry < 1 ||
+    mtry != as.integer(mtry) ||
+    mtry > ncol(X)
+  ) {
+    stop(
+      "mtry must be an integer between 1 and the number of covariates."
+    )
+  }
+
+  mtry <- as.integer(mtry)
+
+  # min_node_size
+  if (
+    length(min_node_size) != 1L ||
+    !is.numeric(min_node_size) ||
+    !is.finite(min_node_size) ||
+    min_node_size < 1 ||
+    min_node_size != as.integer(min_node_size)
+  ) {
+    stop("min_node_size must be a positive integer.")
+  }
+
+  min_node_size <- as.integer(min_node_size)
+
+  # max_depth
+  if (is.null(max_depth)) {
+    # NA_integer_ means no limitation
+    max_depth <- NA_integer_
+
+  } else if (
+    length(max_depth) != 1L ||
+    !is.numeric(max_depth) ||
+    !is.finite(max_depth) ||
+    max_depth < 0 ||
+    max_depth != as.integer(max_depth)
+  ) {
+    stop("max_depth must be NULL or a non-negative integer.")
+
+  } else {
+    max_depth <- as.integer(max_depth)
+  }
+
+  # min_leaf_size
+  if (
+    length(min_leaf_size) != 1L ||
+    !is.numeric(min_leaf_size) ||
+    !is.finite(min_leaf_size) ||
+    min_leaf_size < 1 ||
+    min_leaf_size != as.integer(min_leaf_size)
+  ) {
+    stop("min_leaf_size must be a positive integer.")
+  }
+
+  min_leaf_size <- as.integer(min_leaf_size)
+
+  # replace
+  if (
+    !is.logical(replace) ||
+    length(replace) != 1L ||
+    is.na(replace)
+  ) {
+    stop("replace must be TRUE or FALSE.")
+  }
+
+  # sample_fraction
+  if (
+    length(sample_fraction) != 1L ||
+    !is.numeric(sample_fraction) ||
+    !is.finite(sample_fraction) ||
+    sample_fraction <= 0 ||
+    sample_fraction > 1
+  ) {
+    stop("sample_fraction must be a number in (0, 1].")
+  }
+
+  # K and Phi
   if (is.null(K) && is.null(Phi)) {
     stop("Either K or Phi must be specified.")
   }
@@ -135,27 +246,18 @@ simpleOKRF <- function(K = NULL, Phi = NULL, X,
 
   }
 
+  # tol
   stopifnot(
-    length(tol) == 1L,
-    is.finite(tol),
-    tol > 0
+    length(tol) != 1L ||
+    !is.numeric(tol) ||
+    !is.finite(tol) ||
+    tol <= 0
   )
 
-  if (is.null(mtry)) {
-    mtry <- sqrt(ncol(X))
-  } else if (mtry > ncol(X)) {
-    stop("Mtry cannot be larger than number of independent variables.")
-  }
-  if (is.null(min_node_size)) {
-    min_node_size <- 5
-  }
-
-  ## Unordered factors
+  # unordered_factors
   if (!(unordered_factors %in% c("ignore", "partition"))) {
     stop("Unknown value for unordered_factors.")
   }
-
-  ##  TODO: Add checks and give informative error messages for other params
 
   if (unordered_factors == "ignore") {
     ## Just set to ordered if "ignore"
@@ -174,14 +276,19 @@ simpleOKRF <- function(K = NULL, Phi = NULL, X,
   }
 
   ## Create forest object
-  forest <- Forest$new(num_trees = as.integer(num_trees),
-                         mtry = as.integer(mtry),
-                         min_node_size = as.integer(min_node_size),
-                         replace = replace,
-                         x_data = Data$new(data = X),
-                         unordered_factors = unordered_factors,
-                         feat_rep = feat_rep,
-                         tol = tol)
+  forest <- Forest$new(
+    num_trees = num_trees,
+    mtry = mtry,
+    min_node_size = min_node_size,
+    max_depth = max_depth,
+    min_leaf_size = min_leaf_size,
+    replace = replace,
+    sample_fraction = sample_fraction,
+    x_data = Data$new(data = X),
+    unordered_factors = unordered_factors,
+    feat_rep = feat_rep,
+    tol = tol
+  )
 
   ## Grow forest
   forest$grow(num_threads = num_threads)
