@@ -93,6 +93,8 @@ Tree <- setRefClass("Tree",
         reference_ids = unique(bootstrap_sample)
       )
 
+      validatePreparedFeatures()
+
       # Call recursive splitting function on root node
       splitNode(1L)
 

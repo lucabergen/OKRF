@@ -2,6 +2,12 @@
 ##' Compute approximate features used by the OKRF tree in splitting
 approximateFeatures <- function(feat_rep, tol) {
 
+  if (!identical(feat_rep$type, "explicit") &&
+      !identical(feat_rep$type, "implicit")) {
+    stop("`feat_rep$type` must be either 'explicit' or 'implicit'.")
+  }
+
+
   if (feat_rep$type == "explicit") {
     pqr_wrap(
       X = feat_rep$Phi,
