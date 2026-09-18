@@ -91,6 +91,7 @@ Forest <- setRefClass("Forest",
           prepared_features = prepared_features,
           feat_rep = feat_rep,
           tol = tol,
+          scope = scope,
           sample_fraction = sample_fraction
         ),
         simplify = FALSE

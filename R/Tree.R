@@ -11,6 +11,7 @@ Tree <- setRefClass("Tree",
     x_data = "Data",
     feat_rep = "list",
     tol = "numeric",
+    scope = "character",
     prepared_features = "list",
     sampleIDs = "list",
     oob_sampleIDs = "integer",
@@ -85,15 +86,18 @@ Tree <- setRefClass("Tree",
       sampleIDs <<- list(bootstrap_sample)
 
 
-      ## Prepare tree-specific split features
-      prepared_features <<- prepareFeatures(
-        feat_rep = feat_rep,
-        tol = tol,
-        scope = "tree",
-        reference_ids = unique(bootstrap_sample)
-      )
+      if (identical(scope, "tree")) {
 
-      validatePreparedFeatures()
+        ## Prepare tree-specific split features
+        prepared_features <<- prepareFeatures(
+          feat_rep = feat_rep,
+          tol = tol,
+          scope = "tree",
+          reference_ids = unique(bootstrap_sample)
+        )
+
+        validatePreparedFeatures()
+      }
 
       # Call recursive splitting function on root node
       splitNode(1L)
