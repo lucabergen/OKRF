@@ -26,24 +26,10 @@ Tree <- setRefClass("Tree",
 
       callSuper(...)
 
-      if (!is.list(prepared_features)) {
-        stop("`prepared_features` must be a list.")
-      }
-
-      if (!is.matrix(prepared_features$split_features)) {
-        stop(
-          "`prepared_features$split_features` must be a matrix."
-        )
-      }
-
-      if (nrow(prepared_features$split_features) != x_data$nrow) {
-        stop(
-          "`prepared_features$split_features` must have one row for each ",
-          "observation in `x_data`."
-        )
-      }
+      validatePreparedFeatures()
 
       leaf_predictions <<- matrix(
+        numeric(0),
         nrow = 0L,
         ncol = 0L
       )
@@ -53,31 +39,7 @@ Tree <- setRefClass("Tree",
 
     grow = function(replace) {
 
-      ## Validate Cholesky features
-      if (!is.list(prepared_features)) {
-        stop("`prepared_features` must be a list.")
-      }
-
-      if (!is.matrix(prepared_features$split_features)) {
-        stop("`prepared_features$split_features` must be a matrix.")
-      }
-
-      if (nrow(prepared_features$split_features) != x_data$nrow) {
-        stop(
-          "`prepared_features$split_features` must have one row for each ",
-          "row in `x_data`."
-        )
-      }
-
-      if (length(prepared_features$rank) != 1L ||
-          !is.numeric(prepared_features$rank) ||
-          !is.finite(prepared_features$rank) ||
-          prepared_features$rank != ncol(prepared_features$split_features)) {
-        stop(
-          "`prepared_features$rank` must equal ",
-          "`ncol(prepared_features$split_features)`."
-        )
-      }
+      validatePreparedFeatures()
 
       ## Boostrap
       num_samples <- x_data$nrow
@@ -121,7 +83,7 @@ Tree <- setRefClass("Tree",
       sampleIDs <<- list(bootstrap_sample)
 
       # Call recursive splitting function on root node
-      splitNode(1)
+      splitNode(1L)
 
       # Ensure that every node has an entry in child_nodeIDs.
       # Leaf nodes are represented by NULL.
@@ -138,6 +100,39 @@ Tree <- setRefClass("Tree",
 
       invisible(.self)
     },
+
+
+    validatePreparedFeatures = function() {
+
+      if (!is.list(prepared_features)) {
+        stop("`prepared_features` must be a list.")
+      }
+
+      if (!is.matrix(prepared_features$split_features)) {
+        stop("`prepared_features$split_features` must be a matrix.")
+      }
+
+      if (nrow(prepared_features$split_features) != x_data$nrow) {
+        stop(
+          "`prepared_features$split_features` must have one row for each ",
+          "observation in `x_data`."
+        )
+      }
+
+      if (length(prepared_features$rank) != 1L ||
+          !is.numeric(prepared_features$rank) ||
+          !is.finite(prepared_features$rank) ||
+          prepared_features$rank !=
+          ncol(prepared_features$split_features)) {
+        stop(
+          "`prepared_features$rank` must equal ",
+          "`ncol(prepared_features$split_features)`."
+        )
+      }
+
+      invisible(.self)
+    },
+
 
     splitNode = function(nodeID, depth = 0L) {
 
