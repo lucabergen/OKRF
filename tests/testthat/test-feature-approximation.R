@@ -376,3 +376,71 @@ test_that("tree reference IDs match the bootstrap sample", {
     sort(unique(tree$sampleIDs[[1L]]))
   )
 })
+
+
+test_that("findBestOrderedSplit finds the best threshold", {
+  ordered_values <- c(1, 2, 3, 4)
+
+  ordered_features <- matrix(
+    ordered_values,
+    ncol = 1L
+  )
+
+  best_split <- simpleOKRF:::findBestOrderedSplit(
+    ordered_values = ordered_values,
+    ordered_features = ordered_features,
+    min_leaf_size = 1L,
+    split_varID = 1L,
+    best_split = list(
+      score = -Inf,
+      varID = NA_integer_,
+      value = NA_real_,
+      values_left = character(0)
+    )
+  )
+
+  expect_equal(
+    best_split$varID,
+    1L
+  )
+
+  expect_equal(
+    best_split$value,
+    2.5
+  )
+
+  expect_equal(
+    best_split$score,
+    29
+  )
+})
+
+
+test_that("findBestOrderedSplit keeps the current result for constant values", {
+  ordered_values <- rep(1, 4L)
+
+  ordered_features <- matrix(
+    ordered_values,
+    ncol = 1L
+  )
+
+  current_best <- list(
+    score = 10,
+    varID = 2L,
+    value = 1.5,
+    values_left = character(0)
+  )
+
+  result <- simpleOKRF:::findBestOrderedSplit(
+    ordered_values = ordered_values,
+    ordered_features = ordered_features,
+    min_leaf_size = 1L,
+    split_varID = 1L,
+    best_split = current_best
+  )
+
+  expect_identical(
+    result,
+    current_best
+  )
+})
