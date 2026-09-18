@@ -303,6 +303,16 @@ test_that("unknown factor levels are rejected after character recoding", {
 
 
 test_that("a root-only tree routes every observation to the root", {
+
+  X <- data.frame(
+    x = c(0, 1, 2, 3, 4, 5)
+  )
+
+  Phi <- cbind(
+    intercept = 1,
+    x = X$x
+  )
+
   forest <- simpleOKRF(
     X = X,
     Phi = Phi,
@@ -326,6 +336,16 @@ test_that("a root-only tree routes every observation to the root", {
 
 
 test_that("a constant covariate routes observations to valid leaves", {
+
+  X <- data.frame(
+    x = c(0, 1, 2, 3, 4, 5)
+  )
+
+  Phi <- cbind(
+    intercept = 1,
+    x = X$x
+  )
+
   X_constant <- X
 
   X_constant[, 1L] <- X_constant[1L, 1L]
@@ -355,6 +375,16 @@ test_that("a constant covariate routes observations to valid leaves", {
 
 
 test_that("every reached leaf contains training IDs", {
+
+  X <- data.frame(
+    x = c(0, 1, 2, 3, 4, 5)
+  )
+
+  Phi <- cbind(
+    intercept = 1,
+    x = X$x
+  )
+
   forest <- simpleOKRF(
     X = X,
     Phi = Phi,
@@ -385,6 +415,16 @@ test_that("every reached leaf contains training IDs", {
 
 
 test_that("child node storage is normalized", {
+
+  X <- data.frame(
+    x = c(0, 1, 2, 3, 4, 5)
+  )
+
+  Phi <- cbind(
+    intercept = 1,
+    x = X$x
+  )
+
   forest <- simpleOKRF(
     X = X,
     Phi = Phi,
@@ -420,6 +460,16 @@ test_that("child node storage is normalized", {
 
 
 test_that("leaf IDs are valid integer node IDs", {
+
+  X <- data.frame(
+    x = c(0, 1, 2, 3, 4, 5)
+  )
+
+  Phi <- cbind(
+    intercept = 1,
+    x = X$x
+  )
+
   forest <- simpleOKRF(
     X = X,
     Phi = Phi,

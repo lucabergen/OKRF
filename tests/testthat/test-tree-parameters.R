@@ -433,3 +433,133 @@ test_that("invalid tree parameters are rejected", {
     "num_threads"
   )
 })
+
+
+test_that("explicit features are separated into split and response features", {
+  Phi <- matrix(
+    c(
+      1, 0,
+      0, 1,
+      1, 1
+    ),
+    nrow = 3L,
+    byrow = TRUE
+  )
+
+  prepared_features <- prepareFeatures(
+    feat_rep = list(
+      type = "explicit",
+      Phi = Phi
+    ),
+    tol = 1e-8
+  )
+
+  expect_true(
+    is.matrix(prepared_features$split_features)
+  )
+
+  expect_identical(
+    prepared_features$response_features,
+    Phi
+  )
+
+  expect_equal(
+    nrow(prepared_features$split_features),
+    nrow(Phi)
+  )
+
+  expect_equal(
+    prepared_features$rank,
+    ncol(prepared_features$split_features)
+  )
+
+  expect_identical(
+    prepared_features$scope,
+    "forest"
+  )
+})
+
+
+test_that("kernel features do not create explicit response features", {
+  K <- matrix(
+    c(
+      1, 0.2, 0.1,
+      0.2, 1, 0.3,
+      0.1, 0.3, 1
+    ),
+    nrow = 3L,
+    byrow = TRUE
+  )
+
+  prepared_features <- prepareFeatures(
+    feat_rep = list(
+      type = "kernel",
+      K = K
+    ),
+    tol = 1e-8
+  )
+
+  expect_true(
+    is.matrix(prepared_features$split_features)
+  )
+
+  expect_equal(
+    nrow(prepared_features$split_features),
+    nrow(K)
+  )
+
+  expect_true(
+    is.matrix(prepared_features$response_features)
+  )
+
+  expect_equal(
+    nrow(prepared_features$response_features),
+    0L
+  )
+
+  expect_equal(
+    ncol(prepared_features$response_features),
+    0L
+  )
+})
+
+
+test_that("Tree receives prepared split and response features", {
+  X <- data.frame(
+    x = c(0, 1, 2, 3)
+  )
+
+  Phi <- matrix(
+    c(
+      1, 0,
+      0, 1,
+      1, 1,
+      2, 1
+    ),
+    nrow = 4L,
+    byrow = TRUE
+  )
+
+  forest <- simpleOKRF(
+    X = X,
+    Phi = Phi,
+    num_trees = 1L
+  )
+
+  tree <- forest$trees[[1L]]
+
+  expect_true(
+    is.matrix(tree$prepared_features$split_features)
+  )
+
+  expect_identical(
+    tree$prepared_features$response_features,
+    Phi
+  )
+
+  expect_equal(
+    nrow(tree$prepared_features$split_features),
+    nrow(X)
+  )
+})
+

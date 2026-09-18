@@ -77,8 +77,7 @@ prepareFeatures <- function(feat_rep, tol, scope = "forest", reference_ids = NUL
 
   scope <- match.arg(scope, c("forest", "tree"))
 
-  ## The current implementation is forest-level.
-  ## Tree-level preparation will use reference_ids in a later step.
+  ## TODO: Add tree-level features
   if (scope == "tree") {
     stop(
       "Tree-level feature preparation is not implemented yet."

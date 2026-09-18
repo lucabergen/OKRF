@@ -196,7 +196,7 @@ Forest <- setRefClass("Forest",
         forest_prediction <- matrix(
           0,
           nrow = num_newdata,
-          ncol = ncol(prepared_features$response_features)
+          ncol = ncol(response_features)
         )
 
         for (tree in trees) {
