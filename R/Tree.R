@@ -43,7 +43,7 @@ Tree <- setRefClass("Tree",
 
       validatePreparedFeatures()
 
-      ## Boostrap
+      ## Bootstrap
       num_samples <- x_data$nrow
 
       num_bootstrap_samples <- floor(
@@ -83,6 +83,15 @@ Tree <- setRefClass("Tree",
 
       ## Assign bootstrap samples to root node
       sampleIDs <<- list(bootstrap_sample)
+
+
+      ## Prepare tree-specific split features
+      prepared_features <<- prepareFeatures(
+        feat_rep = feat_rep,
+        tol = tol,
+        scope = "tree",
+        reference_ids = unique(bootstrap_sample)
+      )
 
       # Call recursive splitting function on root node
       splitNode(1L)
@@ -136,14 +145,20 @@ Tree <- setRefClass("Tree",
     },
 
 
+    computeFeatureScore = function(feature_sum, num_observations) {
+
+      sum(feature_sum^2) / num_observations
+    },
+
+
     splitNode = function(nodeID, depth = 0L) {
 
       node_sampleIDs <- sampleIDs[[nodeID]]
 
-      ## A terminal node must contain at least min_leaf_size observations
+      ## A leaf node must contain at least min_leaf_size observations
       if (length(node_sampleIDs) < min_leaf_size) {
         split_varIDs[[nodeID]] <<- NA_integer_
-        makeTerminalNode(nodeID)
+        makeLeafNode(nodeID)
         return(invisible(NULL))
       }
 
@@ -151,14 +166,14 @@ Tree <- setRefClass("Tree",
       ## min_leaf_size observations each
       if (length(node_sampleIDs) < 2L * min_leaf_size) {
         split_varIDs[[nodeID]] <<- NA_integer_
-        makeTerminalNode(nodeID)
+        makeLeafNode(nodeID)
         return(invisible(NULL))
       }
 
       ## Stop at the maximum depth
       if (!is.na(max_depth) && depth >= max_depth) {
         split_varIDs[[nodeID]] <<- NA_integer_
-        makeTerminalNode(nodeID)
+        makeLeafNode(nodeID)
         return(invisible(NULL))
       }
 
@@ -215,7 +230,7 @@ Tree <- setRefClass("Tree",
         # Unlike in normal regression trees, leafs do not include predictions,
         # but observation indices (possibly with repetitions due to bootstrap)
         split_varIDs[[nodeID]] <<- NA_integer_
-        makeTerminalNode(nodeID)
+        makeLeafNode(nodeID)
       }
     },
 
@@ -312,7 +327,14 @@ Tree <- setRefClass("Tree",
         ## Only admissible leaf node sizes are considered
         if (n_left >= min_leaf_size && n_right >= min_leaf_size){
 
-          score <- sum(sum_left^2) / n_left + sum(sum_right^2) / n_right
+          score <- computeFeatureScore(
+            feature_sum = sum_left,
+            num_observations = n_left
+          ) +
+            computeFeatureScore(
+              feature_sum = sum_right,
+              num_observations = n_right
+            )
 
           if (score > best_split$score) {
 
@@ -340,6 +362,11 @@ Tree <- setRefClass("Tree",
 
       node_sampleIDs <- sampleIDs[[nodeID]]
 
+      # No features available to score
+      if (ncol(prepared_features$split_features) == 0L) {
+        return(NULL)
+      }
+
       ## Do not attempt a split below min_node_size
       if (length(node_sampleIDs) < min_node_size) {
         return(NULL)
@@ -358,7 +385,10 @@ Tree <- setRefClass("Tree",
 
       node_sum <- colSums(node_features)
 
-      node_score <- sum(node_sum^2) / length(node_sampleIDs)
+      node_score <- computeFeatureScore(
+        feature_sum = node_sum,
+        num_observations = length(node_sampleIDs)
+      )
 
       ## Search candidate splits
       best_split <- findBestSplit(
@@ -488,7 +518,7 @@ Tree <- setRefClass("Tree",
     },
 
 
-    makeTerminalNode = function(nodeID) {
+    makeLeafNode = function(nodeID) {
       ## Save observation indices
       leaf_train_ids[[nodeID]] <<- sampleIDs[[nodeID]]
     }

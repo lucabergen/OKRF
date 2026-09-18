@@ -8,6 +8,14 @@ prepareFeatures(feat_rep, tol, scope = "forest", reference_ids = NULL)
 }
 \description{
 `feat_rep` contains the original output representation, either `Phi`
-or `K`. The returned object separates features used for splitting
-from features used for terminal response predictions.
+or `K`. The returned object separates explicit features used for splitting
+from explicit features used for leaf response predictions. The features used
+for splitting are either approximated on the full sample (scope = "forest")
+or on tree-specific reference samples only (scope = "tree"). The features
+for response prediction are over the full sample in both cases.
+}
+\details{
+For explicit feature representations, `response_features` contains
+the complete original feature matrix. For implicit kernel
+representations, no explicit response feature matrix is available.
 }

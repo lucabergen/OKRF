@@ -563,3 +563,197 @@ test_that("Tree receives prepared split and response features", {
   )
 })
 
+
+test_that("tree-level features use bootstrap reference IDs", {
+  X <- data.frame(
+    x = c(0, 1, 2, 3, 4, 5)
+  )
+
+  Phi <- cbind(
+    intercept = 1,
+    x = X$x
+  )
+
+  forest <- simpleOKRF(
+    X = X,
+    Phi = Phi,
+    num_trees = 1L,
+    min_leaf_size = 1L
+  )
+
+  tree <- forest$trees[[1L]]
+
+  expected_reference_ids <- sort(
+    unique(
+      tree$sampleIDs[[1L]]
+    )
+  )
+
+  expect_identical(
+    tree$prepared_features$scope,
+    "tree"
+  )
+
+  expect_identical(
+    tree$prepared_features$reference_ids,
+    expected_reference_ids
+  )
+
+  expect_equal(
+    nrow(tree$prepared_features$split_features),
+    nrow(X)
+  )
+
+  expect_equal(
+    tree$prepared_features$rank,
+    ncol(tree$prepared_features$split_features)
+  )
+})
+
+
+test_that("tree-level features work with an implicit kernel", {
+  X <- data.frame(
+    x = c(0, 1, 2, 3)
+  )
+
+  K <- outer(
+    X$x,
+    X$x,
+    function(x, y) {
+      exp(-(x - y)^2)
+    }
+  )
+
+  forest <- simpleOKRF(
+    X = X,
+    K = K,
+    num_trees = 1L,
+    min_leaf_size = 1L
+  )
+
+  tree <- forest$trees[[1L]]
+
+  expect_identical(
+    tree$prepared_features$scope,
+    "tree"
+  )
+
+  expect_equal(
+    nrow(tree$prepared_features$split_features),
+    nrow(X)
+  )
+
+  expect_equal(
+    ncol(tree$prepared_features$response_features),
+    0L
+  )
+})
+
+
+test_that("tree-level reference IDs are valid", {
+  X <- data.frame(
+    x = seq_len(8L)
+  )
+
+  Phi <- cbind(
+    intercept = 1,
+    x = X$x
+  )
+
+  forest <- simpleOKRF(
+    X = X,
+    Phi = Phi,
+    num_trees = 1L
+  )
+
+  tree <- forest$trees[[1L]]
+
+  reference_ids <- tree$prepared_features$reference_ids
+
+  expect_true(
+    all(reference_ids >= 1L)
+  )
+
+  expect_true(
+    all(reference_ids <= nrow(X))
+  )
+
+  expect_equal(
+    reference_ids,
+    sort(unique(reference_ids))
+  )
+})
+
+
+test_that("forest parameters are propagated to every tree", {
+  X <- data.frame(
+    x1 = seq_len(12L),
+    x2 = rev(seq_len(12L))
+  )
+
+  Phi <- cbind(
+    intercept = 1,
+    x = X$x1
+  )
+
+  forest <- simpleOKRF(
+    X = X,
+    Phi = Phi,
+    num_trees = 3L,
+    mtry = 1L,
+    min_node_size = 4L,
+    min_leaf_size = 2L,
+    max_depth = 2L
+  )
+
+  expect_length(
+    forest$trees,
+    3L
+  )
+
+  for (tree in forest$trees) {
+    expect_equal(tree$mtry, forest$mtry)
+    expect_equal(tree$min_node_size, forest$min_node_size)
+    expect_equal(tree$min_leaf_size, forest$min_leaf_size)
+    expect_equal(tree$max_depth, forest$max_depth)
+    expect_equal(
+      tree$sample_fraction,
+      forest$sample_fraction
+    )
+  }
+})
+
+
+test_that("feature scores are computed correctly", {
+  tree <- Tree$new(
+    mtry = 1L,
+    min_node_size = 1L,
+    min_leaf_size = 1L,
+    max_depth = 1L,
+    unordered_factors = "ignore",
+    x_data = Data$new(
+      data = data.frame(x = 1:3)
+    ),
+    feat_rep = list(
+      type = "explicit",
+      Phi = diag(3L)
+    ),
+    tol = 1e-3,
+    prepared_features = list(
+      split_features = diag(3L),
+      response_features = diag(3L),
+      rank = 3L,
+      scope = "forest",
+      reference_ids = 1:3
+    ),
+    sample_fraction = 1
+  )
+
+  expect_equal(
+    tree$computeFeatureScore(
+      feature_sum = c(3, 4),
+      num_observations = 2L
+    ),
+    12.5
+  )
+})
