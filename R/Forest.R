@@ -62,6 +62,8 @@ Forest <- setRefClass("Forest",
           unordered_factors = unordered_factors,
           x_data = x_data,
           prepared_features = prepared_features,
+          feat_rep = feat_rep,
+          tol = tol,
           sample_fraction = sample_fraction
         ),
         simplify = FALSE
