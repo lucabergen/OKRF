@@ -493,7 +493,7 @@ test_that("kernel features do not create explicit response features", {
 
   prepared_features <- prepareFeatures(
     feat_rep = list(
-      type = "kernel",
+      type = "implicit",
       K = K
     ),
     tol = 1e-8

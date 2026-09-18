@@ -88,7 +88,7 @@ test_that("approximateFeatures dispatches on the representation type", {
 
   kernel_features <- simpleOKRF:::approximateFeatures(
     feat_rep = list(
-      type = "kernel",
+      type = "implicit",
       K = K
     ),
     tol = 1e-10
