@@ -14,6 +14,7 @@ Forest <- setRefClass("Forest",
     feat_rep = "list",
     prepared_features = "list",
     tol = "numeric",
+    scope = "character",
     x_data = "Data",
     trees = "list",
     replace = "logical",
@@ -26,12 +27,38 @@ Forest <- setRefClass("Forest",
 
       callSuper(...)
 
-      prepared_features <<- prepareFeatures(
-        feat_rep = feat_rep,
-        tol = tol,
-        scope = "forest",
-        reference_ids = seq_len(x_data$nrow)
-      )
+      if (identical(scope, "forest")) {
+
+        prepared_features <<- prepareFeatures(
+          feat_rep = feat_rep,
+          tol = tol,
+          scope = "forest",
+          reference_ids = seq_len(x_data$nrow)
+        )
+
+      } else {
+
+        if (identical(feat_rep$type, "explicit")) {
+
+          response_features <- feat_rep$Phi
+
+        } else {
+
+          # An implicit kernel representation has no explicit
+          # response-feature matrix.
+          response_features <- matrix(numeric(0), nrow = 0L, ncol = 0L)
+
+        }
+
+        prepared_features <<- list(
+          split_features = matrix(numeric(0), nrow = x_data$nrow, ncol = 0L),
+          response_features = response_features,
+          rank = 0L,
+          scope = "tree",
+          reference_ids = NULL
+        )
+
+      }
 
       if (nrow(prepared_features$split_features) != x_data$nrow) {
         stop(

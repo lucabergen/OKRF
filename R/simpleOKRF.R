@@ -80,6 +80,7 @@ simpleOKRF <- function(
     Phi = NULL,
     X,
     tol = 1e-3,
+    scope = c("tree", "forest"),
     num_trees = 200L,
     mtry = floor(sqrt(ncol(X))),
     min_node_size = 5L,
@@ -256,6 +257,9 @@ simpleOKRF <- function(
     stop("tol must be a positive finite number.")
   }
 
+  # scope
+  scope <- match.arg(scope, c("tree", "forest"))
+
   # num_threads
   if (
     length(num_threads) != 1L ||
@@ -302,7 +306,8 @@ simpleOKRF <- function(
     x_data = Data$new(data = X),
     unordered_factors = unordered_factors,
     feat_rep = feat_rep,
-    tol = tol
+    tol = tol,
+    scope = scope
   )
 
   ## Grow forest
