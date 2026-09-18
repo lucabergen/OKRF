@@ -274,38 +274,25 @@ Tree <- setRefClass("Tree",
       best_split
     },
 
-    findBestSplitValueOrdered = function(nodeID, split_varID, best_split) {
-
-      node_sampleIDs <- sampleIDs[[nodeID]]
-
-      data_values <- x_data$subset(node_sampleIDs, split_varID)
-
-      ## Numeric and ordered variables are represented by their numeric codes
-      ordered_values <- as.numeric(data_values)
-
-      ## Sort only once
-      order_idx <- order(ordered_values)
-
-      ordered_values <- ordered_values[order_idx]
-
-      ordered_split_features <- prepared_features$split_features[
-        node_sampleIDs[order_idx],,drop = FALSE
-      ]
+    findBestOrderedSplit = function(ordered_values, ordered_features,
+                                    min_leaf_size, split_varID, best_split) {
 
       num_samples <- length(ordered_values)
 
-      ## End positions of groups with equal covariate values
-      group_ends <- which(
-        ordered_values[-num_samples] < ordered_values[-1L]
-      )
+      # Compare each value with the next value in the sorted vector.
+      # Removing the last value from the left vector and the first value
+      # from the right vector creates all adjacent value pairs.
+      group_ends <- which(ordered_values[-num_samples] < ordered_values[-1L])
 
+      # No valid split exists when all values are equal. In this case, keep the
+      # best split found so far.
       if (length(group_ends) == 0L) {
         return(best_split)
       }
 
-      ## Initially all observations are in the right child
-      sum_left <- numeric(length = prepared_features$rank)
-      sum_right <- colSums(ordered_split_features)
+      # Initially all observations are in the right child
+      sum_left <- numeric(length = ncol(ordered_features))
+      sum_right <- colSums(ordered_features)
 
       n_left <- 0L
       n_right <- num_samples
@@ -313,9 +300,9 @@ Tree <- setRefClass("Tree",
 
       for (group_end in group_ends) {
 
-        ## Move one complete value group from right to left
-        group_features <- ordered_split_features[group_start:group_end,,
-                                                drop = FALSE]
+        # Move one complete group of equal covariate values from the right child
+        # to the left child.
+        group_features <- ordered_features[group_start:group_end,,drop = FALSE]
 
         group_sum <- colSums(group_features)
         group_size <- group_end - group_start + 1L
@@ -326,8 +313,8 @@ Tree <- setRefClass("Tree",
         n_left <- n_left + group_size
         n_right <- n_right - group_size
 
-        ## Only admissible leaf node sizes are considered
-        if (n_left >= min_leaf_size && n_right >= min_leaf_size){
+        #  Only admissible leaf node sizes are considered
+        if (n_left >= min_leaf_size && n_right >= min_leaf_size) {
 
           score <- computeFeatureScore(
             feature_sum = sum_left,
@@ -340,6 +327,8 @@ Tree <- setRefClass("Tree",
 
           if (score > best_split$score) {
 
+            # Set the split threshold halfway between the two adjacent
+            # distinct covariate values.
             split_value <- ordered_values[group_end] +
               (ordered_values[group_end + 1L] - ordered_values[group_end]) / 2
 
@@ -352,11 +341,48 @@ Tree <- setRefClass("Tree",
           }
         }
 
-        ## Continue with the next group
+        # Start the next group at the following observation
         group_start <- group_end + 1L
       }
 
       best_split
+    },
+
+
+    findBestSplitValueOrdered = function(nodeID, split_varID, best_split) {
+
+      node_sampleIDs <- sampleIDs[[nodeID]]
+
+      data_values <- x_data$subset(
+        node_sampleIDs,
+        split_varID
+      )
+
+      # Numeric and ordered variables are represented
+      # by their numeric codes.
+      ordered_values <- as.numeric(data_values)
+
+      # Sort covariate values and split features
+      # using the same ordering.
+      order_idx <- order(ordered_values)
+
+      ordered_values <- ordered_values[
+        order_idx
+      ]
+
+      ordered_features <- prepared_features$split_features[
+        node_sampleIDs[order_idx],
+        ,
+        drop = FALSE
+      ]
+
+      findBestOrderedSplit(
+        ordered_values = ordered_values,
+        ordered_features = ordered_features,
+        min_leaf_size = min_leaf_size,
+        split_varID = split_varID,
+        best_split = best_split
+      )
     },
 
 
