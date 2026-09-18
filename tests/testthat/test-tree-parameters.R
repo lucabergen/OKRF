@@ -750,7 +750,7 @@ test_that("feature scores are computed correctly", {
   )
 
   expect_equal(
-    tree$computeFeatureScore(
+    simpleOKRF:::computeFeatureScore(
       feature_sum = c(3, 4),
       num_observations = 2L
     ),
